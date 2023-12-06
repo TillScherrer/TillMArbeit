@@ -5,6 +5,7 @@ using UnityEditor.PackageManager;
 //using Unity.VisualScripting;
 //using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 //using UnityEngine.UIElements;
 //using static UnityEditor.Experimental.GraphView.GraphView;
 //using static UnityEngine.UI.Image;
@@ -93,7 +94,7 @@ public class Car : MonoBehaviour
     //Active Parameters
     float[] previousSpringCompressions = new float[4];
 
-
+    Vector3 inertiaTensorWS = Vector3.one;
 
 
 
@@ -146,24 +147,34 @@ public class Car : MonoBehaviour
 
     private void FixedUpdate()
     {
-        float[] steeringAngles = new float[] {0,0,0,0};
+        Debug.Log("newFramePointVel = " + rb.GetPointVelocity(Vector3.one));
+        inertiaTensorWS = GetInertiaTensorInWorldSpace();
+        //Debug.Log("inertiaTensorLocal: " + rb.inertiaTensor + ",  in WS: " + inertiaTensorWS);
+        float[] steeringAngles = new float[] { 0, 0, 0, 0 };
         //testSteering !!!!!!!!!
-        steeringAngles[0] = 30 * Input.GetAxis("Horizontal");
-        steeringAngles[1] = 30 * Input.GetAxis("Horizontal");
+        steeringAngles[0] = 20 * Input.GetAxis("Horizontal");
+        steeringAngles[1] = 20 * Input.GetAxis("Horizontal");
 
 
         //float currentTime= Time.realtimeSinceStartup;
         Vector3[] hitPoints;
         Vector3[] hitNormals;
+        Vector3[] hitPointForLateral;
+        Vector3[] hitPointForLongitudal;
         float[] absoluteSpringCompressions;
         float[] springCompressions;
         int[] collidedGroundType;
         //Vector3 relUp = transform.rotation * Vector3.up;
 
         FindGroundInteraction(out hitPoints, out hitNormals, out absoluteSpringCompressions, out collidedGroundType);
+        hitPointForLateral = new Vector3[] { GetLiftedPoint(hitPoints[0], lateralAttackHeightLift), GetLiftedPoint(hitPoints[1], lateralAttackHeightLift) , GetLiftedPoint(hitPoints[2], lateralAttackHeightLift) , GetLiftedPoint(hitPoints[3], lateralAttackHeightLift) };
+        hitPointForLongitudal = new Vector3[] { GetLiftedPoint(hitPoints[0], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[1], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[2], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[3], longitudalAttackHeightLift) };
+
         ApplyAntiRollBar(absoluteSpringCompressions, out springCompressions);
 
         float[] suspPowers = new float[4];
+        Vector3[] verticalForces = new Vector3[4];
+        Vector3[] verticalForcesWithoutDamping = new Vector3[4];
         for (int i = 0; i < 4; i++)
         {
             //SUSPENSION
@@ -173,14 +184,15 @@ public class Car : MonoBehaviour
             float deltaSpringCompression = absoluteSpringCompressions[i] - previousSpringCompressions[i];
             float dampingCoefficient = i < 2 ? frontWheelDamping : rearWheelDamping;
             float dampingValue = dampingCoefficient * deltaSpringCompression / Time.fixedDeltaTime * springCompressions[i];
-            Vector3 verticalForce = hitNormals[i] * (suspPowers[i] + dampingValue) * rb.mass;
-            rb.AddForceAtPosition(verticalForce, hitPoints[i]);
+            verticalForcesWithoutDamping[i] = hitNormals[i] * suspPowers[i] * rb.mass;
+            verticalForces[i] = hitNormals[i] * (suspPowers[i] + dampingValue) * rb.mass;
+            rb.AddForceAtPosition(verticalForces[i], hitPoints[i]);
             //handle hard bump when wheelSprings are compressed over the maximum
             if (absoluteSpringCompressions[i] > looseSpringOffsetLength[i] + upwardSuspensionCap[i])
             {
 
                 //if it is not already in a state of extending the spring again
-                if (Vector3.Angle( rb.GetPointVelocity(hitPoints[i]), hitNormals[i]) > 90)
+                if (Vector3.Angle(rb.GetPointVelocity(hitPoints[i]), hitNormals[i]) > 90)
                 {
                     Vector3 angularChange;
                     Vector3 directionalChange;
@@ -193,46 +205,169 @@ public class Car : MonoBehaviour
 
 
 
-            //SIDEWARD FRICTION
-            //if (i == 0)
-            //{
-                Vector3 directionFoward = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward);
-                Vector3 rOnGround = Vector3.Cross(hitNormals[i], directionFoward);
-                //Debug.DrawRay(hitPoints[i], rOnGround.normalized);
-                Vector3 slideDirection = (rOnGround * ((Vector3.Angle(rb.GetPointVelocity(hitPoints[i]), rOnGround) > 90) ? -1 : 1)).normalized;
-                Debug.DrawRay(hitPoints[i], -slideDirection.normalized, Color.black);
-                //if (i == 0) Debug.DrawRay(hitPoints[i], -slideDirection.normalized * 0.1f, Color.blue, 0.3f);
-                //Debug.DrawRay(hitPoints[i], rb.GetPointVelocity(hitPoints[i]), Color.cyan);
-                float maxStopImpuse = verticalForce.magnitude * 2.3f * Time.fixedDeltaTime;//verticalForce.magnitude*0.1f * Time.fixedDeltaTime; //TEST VALUE!!!
-                Vector3 angularChange1;
-                Vector3 directionalChange1;
-                float neededImpulseToStop;
-                ImpulseNeededToStopDirectionalMovementAtPoint(hitPoints[i], -slideDirection, out angularChange1, out directionalChange1, out neededImpulseToStop);
-                //Debug.Log("maxStopImpulse= " + maxStopImpuse + " neededImpulseToStop=" + neededImpulseToStop);
-                if (maxStopImpuse < neededImpulseToStop/3) //REMOVE /10
-                {
-                    rb.AddForceAtPosition(-slideDirection*maxStopImpuse, hitPoints[i], ForceMode.Impulse);
-
-                    //rb.AddForceAtPosition(-slideDirection * neededImpulseToStop , hitPoints[i], ForceMode.Impulse);
-
-                    //Debug.Log("currentImp= " + maxStopImpuse + "  to stop Imp= " + neededImpulseToStop);
-
-                    //rb.angularVelocity += angularChange1; //TEST
-                    //rb.velocity += directionalChange1; //TEST
-                }
-                else
-                {
-                    //Debug.Log("picked full stop");
-                    rb.AddForceAtPosition(-slideDirection * neededImpulseToStop/3, hitPoints[i], ForceMode.Impulse); //REMOVE /10
-                    //rb.angularVelocity += angularChange1;
-                    //rb.velocity += directionalChange1;
-                }
-            //}
+            
 
         }
 
+        //TESTDRIVING
+        Vector3[] fowardOnGround = new Vector3[4];
+        float[] speedAtWheel = new float[4];
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 sideDirectionR = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.right);
+            fowardOnGround[i] = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
+            speedAtWheel[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), fowardOnGround[i]);
+            Debug.DrawRay(hitPointForLongitudal[i], fowardOnGround[i] * speedAtWheel[i]);
+        }
+        float averatgeWheelSpeed = (speedAtWheel[0] + speedAtWheel[1] + speedAtWheel[2] + speedAtWheel[3]) / 4f;
+        if (Input.GetKey(KeyCode.W))
+        {
+            float acceleration = speedupCurve.GetAccelerationValueOfSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
+            for (int i = 0; i < 4; i++)
+            {
+                rb.AddForceAtPosition(fowardOnGround[i] * acceleration / 4f, hitPointForLongitudal[i]);
+            }
 
 
+            //rb.velocity +=  rb.rotation * Vector3.forward * Time.fixedDeltaTime * 4;
+        }
+        else if (Input.GetKey(KeyCode.S))
+        {
+            float acceleration = speedupCurve.GetAccelerationValueOfSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
+            for (int i = 0; i < 4; i++)
+            {
+                rb.AddForceAtPosition(-fowardOnGround[i] * acceleration / 4f, hitPointForLongitudal[i]);
+            }
+        }
+
+
+        //SIDEWARD FRICTION
+        Vector3[] slideDirections = new Vector3[4];
+        float[] slideSpeeds = new float[4];
+        (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[] impulseProperties = new (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[4];
+        for (int i = 0; i < 4; i++)
+        {
+            //SIDEWARD FRICTION
+            
+            Vector3 directionFoward = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward);
+            Vector3 rOnGround = Vector3.Cross(hitNormals[i], directionFoward);
+            //Debug.DrawRay(hitPoints[i], rOnGround.normalized);
+            slideDirections[i] = (rOnGround * ((Vector3.Angle(GetActualPointVelocity(hitPointForLateral[i]), rOnGround) > 90) ? -1 : 1)).normalized;
+            slideSpeeds[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLateral[i]), slideDirections[i]); // CHECK IF THIS IS CORRECT!!!!
+            Debug.DrawRay(hitPointForLateral[i], -slideDirections[i].normalized, Color.black);
+            //if (i == 0) Debug.DrawRay(hitPoints[i], -slideDirection.normalized * 0.1f, Color.blue, 0.3f);
+            //Debug.DrawRay(hitPoints[i], rb.GetPointVelocity(hitPoints[i]), Color.cyan);
+
+            float maxStopImpulse;
+            if ((i < 2 && endlessFrontWheelGrip) || (i >= 2 && endlessBackWheelGrip))
+            {
+                maxStopImpulse = slideSpeeds[i]* rb.mass / 4; 
+
+            }
+            else
+            {
+                maxStopImpulse = verticalForces[i].magnitude * 20.9f * Time.fixedDeltaTime;//verticalForce.magnitude*0.1f * Time.fixedDeltaTime; //TEST VALUE!!!
+
+            }
+           
+            impulseProperties[i] = ImpulseNeededToStopDirectionalMovementAtPoint(hitPointForLateral[i], -slideDirections[i], maxStopImpulse); // , out angularChange1, out directionalChange1, out neededImpulseToStop);
+                                                                                                                                    //Debug.Log("IMP PROBS[" + i + "]  maxV=" + impulseProperties[i].maxV + ", maxVDir=" + impulseProperties[i].maxVDir + ", maxW=" + impulseProperties[i].maxW + ", rotToV=" + impulseProperties[i].rotToV + ", vDirection=" + impulseProperties[i].vDirection);
+
+            //Vector3 angularChange1;
+            //Vector3 directionalChange1;
+            //float neededImpulseToStop;
+            //Debug.Log("maxStopImpulse= " + maxStopImpuse + " neededImpulseToStop=" + neededImpulseToStop);
+            //if (maxStopImpuse < neededImpulseToStop * 0.25f) //REMOVE /10
+            //{
+            //    rb.AddForceAtPosition(-slideDirections[i] * maxStopImpuse, hitPoints[i], ForceMode.Impulse);
+
+            //    //rb.AddForceAtPosition(-slideDirection * neededImpulseToStop , hitPoints[i], ForceMode.Impulse);
+
+            //    //Debug.Log("currentImp= " + maxStopImpuse + "  to stop Imp= " + neededImpulseToStop);
+
+            //    //rb.angularVelocity += angularChange1; //TEST
+            //    //rb.velocity += directionalChange1; //TEST
+            //}
+            //else
+            //{
+            //    //Debug.Log("picked full stop");
+            //    //rb.AddForceAtPosition(-slideDirection * neededImpulseToStop * 0.4f, hitPoints[i], ForceMode.Impulse); //REMOVE /10
+            //    //rb.angularVelocity += angularChange1;
+            //    //rb.velocity += directionalChange1;
+            //    rb.AddForceAtPosition(-slideDirection * maxStopImpuse, hitPoints[i], ForceMode.Impulse); // TEST to always use maximum
+            //}
+        }
+        float[,] maxsConversionsToMyV = new float[4,4]; //How much would the maximum impulse of another Wheel impact my own directional velocity [toMyV,fromOtherRatio]
+        for(int i = 0; i < 4; i++)
+        {
+            //Debug.Log("maxVTotal= " + impulseProperties[i].maxV);
+            //Debug.Log("maxVDir= " + impulseProperties[i].maxVDir);
+            //Debug.Log("maxV From OWN rotation= " + (impulseProperties[i].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[i].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[i].maxW.z * impulseProperties[i].rotToV.z));
+            for (int j = 0; j < 4; j++)
+            {
+                if (i == j)
+                {
+                    maxsConversionsToMyV[i,j] = 0; //exclude conversion from self
+                }
+                else if (impulseProperties[j].maxV == 0)
+                {
+                    maxsConversionsToMyV[i, j] = 0; //no conversion from wheel, which is not on ground
+                }
+                else
+                {
+                    float fromOtherMaxV = Vector3.Dot(impulseProperties[j].maxVDir * impulseProperties[j].vDirection , impulseProperties[i].vDirection.normalized); //Projection of other directionalV on my directionalV
+                    //Debug.Log("fromOtherV: " + fromOtherMaxV);
+                    float fromOtherMaxW = impulseProperties[j].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[j].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[j].maxW.z * impulseProperties[i].rotToV.z;
+                    maxsConversionsToMyV[i,j] = fromOtherMaxV + fromOtherMaxW;
+                }
+                //Debug.Log("maxConversionsToMyV[" + i + "," + j + "]=" + maxsConversionsToMyV[i, j]);
+            }
+        }
+        float[] plannedRatios = new float[4] {0,0,0,0};
+        float[] prevIterationPR = new float[4] {-2,-2,-2,-2};
+        //every wheels Friction is limited to only stop the wheels lateral movement and can not make it move into the opposide direction
+        //this loop chooses this correct possible friction impulse with respect to all interactions with other wheels
+        for (int iterationCount = 0; iterationCount < 100; iterationCount++)
+        {
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (impulseProperties[i].maxV == 0) //ignore Wheels without friction/ without contact to floor
+                {
+                    plannedRatios[i] = 0;
+                    continue;
+                }
+                float vFromOtherWheels = maxsConversionsToMyV[i,0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
+                float neededOwnV = slideSpeeds[i] - vFromOtherWheels;
+                plannedRatios[i] = neededOwnV / impulseProperties[i].maxV; //* 0.9f; //DELETE *0.9f LATER!!!!
+                if (plannedRatios[i] > 1) plannedRatios[i] = 1;
+                if (plannedRatios[i] < -1) plannedRatios[i] = -1;
+            }
+
+            if (plannedRatios[0] == prevIterationPR[0] && plannedRatios[1] == prevIterationPR[1] && plannedRatios[2] == prevIterationPR[2] && plannedRatios[3] == prevIterationPR[3])
+            {
+                //Debug.Log("Left after "+iterationCount+" iterations");
+                break;
+            }
+            //if (iterationCount == 99) Debug.LogError("exit iteration with emergency exit, prevIterationPR=" + prevIterationPR + " plannedRatios=" + plannedRatios);
+            prevIterationPR[0] = plannedRatios[0]; prevIterationPR[1] = plannedRatios[1]; prevIterationPR[2] = plannedRatios[2]; prevIterationPR[3] = plannedRatios[3];
+        }
+
+        //Apply friction-impulses of all wheels
+        Vector3 angularVelChange = Vector3.zero;
+        Vector3 directionalVelChange = Vector3.zero;
+        for (int i = 0; i < 4; i++)
+        {
+            angularVelChange += plannedRatios[i] * impulseProperties[i].maxW;
+            directionalVelChange += plannedRatios[i] * impulseProperties[i].maxVDir * impulseProperties[i].vDirection;
+            //onlyForDebug
+            float vFromOtherWheels = maxsConversionsToMyV[i, 0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
+            //Debug.Log("estimatedV[" + i + "] with ratio " + plannedRatios[i] + ", slideSpeed="+slideSpeeds[i] +", selfV="+ impulseProperties[i].maxV * plannedRatios[i] +", vFromOthers="+ vFromOtherWheels +",   ->v: "+ (impulseProperties[i].maxV * plannedRatios[i]+ vFromOtherWheels- slideSpeeds[i]));
+        }
+        //Debug.Log("planned Ratios: " + plannedRatios[0] + ", " + plannedRatios[1] + ", " + plannedRatios[2] + ", " + plannedRatios[3]);
+        //Debug.Log("angularChange= " + angularVelChange + ",   directionalChange=" + directionalVelChange);
+        rb.AddTorque(new Vector3(angularVelChange.x*inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
+        rb.AddForce(directionalVelChange * rb.mass, ForceMode.Impulse);
 
 
         previousSpringCompressions = absoluteSpringCompressions;
@@ -241,35 +376,7 @@ public class Car : MonoBehaviour
 
 
 
-
-        //TESTDRIVING
-        if (Input.GetKey(KeyCode.W))
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                Vector3 sideDirectionR = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.right);
-                Vector3 fowardOnGround = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
-                float speedAtWheel = Vector3.Dot(rb.GetPointVelocity(hitPoints[i]), fowardOnGround);
-                Debug.DrawRay(hitPoints[i], fowardOnGround * speedAtWheel);
-                Debug.Log("speedAtWheel" + i + " = " + speedAtWheel);
-                float acceleration = speedupCurve.GetAccelerationValueOfSpeed(speedAtWheel);
-                Debug.Log("acelerationAtWheel" + i + " = " + acceleration);
-                rb.AddForceAtPosition(fowardOnGround * acceleration/4f, hitPoints[i]);
-            }
-
-
-            //rb.velocity +=  rb.rotation * Vector3.forward * Time.fixedDeltaTime * 4;
-        }else if (Input.GetKey(KeyCode.S))
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                Vector3 sideDirectionR = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.right);
-                Vector3 fowardOnGround = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
-                float speedAtWheel = Vector3.Dot(rb.GetPointVelocity(hitNormals[i]), fowardOnGround);
-                float acceleration = speedupCurve.GetAccelerationValueOfSpeed(speedAtWheel);
-                rb.AddForceAtPosition(-fowardOnGround * acceleration / 4f, hitPoints[i]);
-            }
-        }
+        Debug.Log("estimatedVelNextFrame = " + GetActualPointVelocity(Vector3.one));
     }
 
 
@@ -384,17 +491,17 @@ public class Car : MonoBehaviour
         }
     }
 
-    private void ImpulseNeededToStopDirectionalMovementAtPoint(Vector3 Point, Vector3 ImpulseDirToCancleCurrent, out Vector3 angularChange, out Vector3 directionalChange, out float neededImpulse)
+    private (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection) ImpulseNeededToStopDirectionalMovementAtPoint(Vector3 hitPoint, Vector3 ImpulseDirToCancleCurrent, float impulsePower) //, out Vector3 angularChange, out Vector3 directionalChange, out float neededImpulse)
     {
         //part of the currentSpeed going in opposide direction as the counteracting impulse 
-        float neededV = Mathf.Abs(Vector3.Dot(rb.GetPointVelocity(Point), -ImpulseDirToCancleCurrent.normalized));
-        if (neededV == 0)
-        {
-            neededImpulse = 0;
-            angularChange = Vector3.zero;
-            directionalChange = Vector3.zero;
-            return;
-        }
+        //float neededV = Mathf.Abs(Vector3.Dot(rb.GetPointVelocity(Point), -ImpulseDirToCancleCurrent.normalized));
+        //if (neededV == 0)
+        //{
+        //    neededImpulse = 0;
+        //    angularChange = Vector3.zero;
+        //    directionalChange = Vector3.zero;
+        //    return;
+        //}
         //Debug.Log("Point vel:" + rb.GetPointVelocity(Point));
         //Debug.Log("vel to cancle out: " + neededV);
 
@@ -405,7 +512,7 @@ public class Car : MonoBehaviour
         //Vector3 speedPerAngularVelocity = Vector3.Cross(localPoint, localDir); //how much one unit roation around each axis would move the point in direction of force
 
 
-        Vector3 speedPerAngularVelocity = Vector3.Cross(Point - rb.worldCenterOfMass, ImpulseDirToCancleCurrent.normalized); //how much one unit roation around each axis would move the point in direction of force
+        Vector3 speedPerAngularVelocity = Vector3.Cross(hitPoint - rb.worldCenterOfMass, ImpulseDirToCancleCurrent.normalized); //how much one unit roation around each axis would move the point in direction of force
         Vector3 angularDirections = new Vector3(speedPerAngularVelocity.x > 0 ? 1 : speedPerAngularVelocity.x < 0 ? -1 : 0,
                                                 speedPerAngularVelocity.y > 0 ? 1 : speedPerAngularVelocity.y < 0 ? -1 : 0,
                                                 speedPerAngularVelocity.z > 0 ? 1 : speedPerAngularVelocity.z < 0 ? -1 : 0);
@@ -417,111 +524,121 @@ public class Car : MonoBehaviour
 
 
         Vector3 s = speedPerAngularVelocity;//short name
-        Vector3 j = Quaternion.Inverse(rb.rotation) * (rb.inertiaTensor); //inertiaTensor in global Space // WARNING: this might be wrong!!!
-        j = new Vector3(Mathf.Abs(j.x), Mathf.Abs(j.y), Mathf.Abs(j.z));             // ""
-        //Vector3 j = rb.inertiaTensor; //short name
+        Vector3 j = inertiaTensorWS; //short name
 
 
-        //current parts from rotational(xyz) and directional movement, that move against the direction-to-cancle-out at the relevant position
-        float PVx = rb.angularVelocity.x * s.x * angularDirections.x;
-        float PVy = rb.angularVelocity.y * s.y * angularDirections.y;
-        float PVz = rb.angularVelocity.z * s.z * angularDirections.z;
-        float PVd = Vector3.Dot(rb.velocity, ImpulseDirToCancleCurrent.normalized);
-        //Debug.Log("neededV=" + neededV + " all PV added =" + (PVx + PVy + PVz + PVd));
 
         //all following interim results happen to appear very often in the main final equation, so they are calculated once here
-        float Mx = j.x / (s.x * s.x);
-        float My = j.y / (s.y * s.y);
-        float Mz = j.z / (s.z * s.z);
+        //float Mx = j.x / (s.x * s.x);
+        //float My = j.y / (s.y * s.y);
+        //float Mz = j.z / (s.z * s.z);
         float Md = rb.mass;
-        //interim result
-        float PId = Md * PVd; //previous directional Impulse
-        //interim results
-        float MdDivMx = Md / Mx;
-        float MdDivMy = Md / My;
-        float MdDivMz = Md / Mz;
-        //interim results
-        float PIdDivMx = PId / Mx; //previouse directional Impulse divided by mass-equivalent of xRotation
-        float PIdDivMy = PId / My;
-        float PIdDivMz = PId / Mz;
-        //interim result
-        float leftoverVd = neededV + PVx + PVy + PVz;
-
-        //wanted delta velocities
-        float d; 
-        float x;
-        float y;
-        float z;
-
-        //unfortunately each of the 4 parts of the formular is different depending if the new velocity leads to a direction-change of the rotational axis or directional movement. It is only known which forular part is correct AFTER calculating it
-        //the formular part for a direction-change is only possible when the corresponding previous v is negative, therefor unnecesarry calculations are prevented by "...&& PV_ < 0)"
-        for (int dTwist=1; dTwist == 1 || (dTwist == -1 && PVd < 0); dTwist-=2)
-        {
-            for (int xTwist = 1; xTwist == 1 || (xTwist == -1 && PVx < 0); xTwist -= 2)
-            {
-                for (int yTwist = 1; yTwist == 1 || (yTwist == -1 && PVy < 0); yTwist -= 2)
-                {
-                    for (int zTwist = 1; zTwist == 1 || (zTwist == -1 && PVz < 0); zTwist -= 2)
-                    {
-                        d = (leftoverVd - dTwist * (xTwist * PIdDivMx + yTwist * PIdDivMy + zTwist * PIdDivMz)) / (1 + xTwist * MdDivMx + yTwist * MdDivMy + zTwist * MdDivMz);
-                        if (d < 0) continue; //force is not supposed to cause a delta velocity into the opposide direction
-                        if (PVd < 0 && dTwist == 1 && PVd + d > 0) continue; //can not apply the formular for no-direction-change (by having the multiplier dTwist set to 1) if it turns out to cause a direction change
-                        if (dTwist == -1 && PVd + d < 0) continue; //can not apply direction-change-formular (by dTwist = -1) if it turns out not to cause a direction change
-                        x = dTwist * xTwist * (d * MdDivMx + PIdDivMx) - PVx;
-                        if (x < 0) continue;
-                        if (PVx < 0 && xTwist == 1 && PVx + x > 0) continue;
-                        if (xTwist == -1 && PVx + x < 0) continue;
-                        y = dTwist * yTwist * (d * MdDivMy + PIdDivMy) - PVy;
-                        if (y < 0) continue;
-                        if (PVy < 0 && yTwist == 1 && PVy + y > 0) continue;
-                        if (yTwist == -1 && PVy + y < 0) continue;
-                        z = dTwist * zTwist * (d * MdDivMz + PIdDivMz) - PVz;
-                        if (z < 0) continue;
-                        if (PVz < 0 && zTwist == 1 && PVz + z > 0) continue;
-                        if (zTwist == -1 && PVz + z < 0) continue;
-                    }
-                }
-            }
-        }
 
 
 
+        //float multiplierAllSpeeds = 2 * j.x * j.y * j.z * Md * neededV / (s.x * s.x * j.y * j.z * Md + s.y * s.y * j.x * j.z * Md + s.z * s.z * j.x * j.y * Md + j.x * j.y * j.z);
+        //multiplierAllSpeeds = Mathf.Abs(multiplierAllSpeeds);
+        ////speed provided by each rotation
+        //float vx = (s.x * s.x) / (2 * j.x) * multiplierAllSpeeds;
+        //float vy = (s.y * s.y) / (2 * j.y) * multiplierAllSpeeds;
+        //float vz = (s.z * s.z) / (2 * j.z) * multiplierAllSpeeds;
+        //float vdir = 1 / (2 * Md) * multiplierAllSpeeds;
 
 
 
+        ////relative speed Split:         //OLD PROPABLY DELETE COMPLETELY
+        //float vx = (s.x * s.x) / j.x;
+        //float vy = (s.y * s.y) / j.y;
+        //float vz = (s.z * s.z) / j.z;
+        //float vdir = 1 / Md;
+        //float totalImpulseCost = vx * j.x / s.x + vy * j.y / s.y + vz * j.z / s.z + 1; //the 1 being vdir*md;
 
-
-        float multiplierAllSpeeds = 2 * j.x * j.y * j.z * Md * neededV / (s.x * s.x * j.y * j.z * Md + s.y * s.y * j.x * j.z * Md + s.z * s.z * j.x * j.y * Md + j.x * j.y * j.z);
-        multiplierAllSpeeds = Mathf.Abs(multiplierAllSpeeds);
-        //speed provided by each rotation
-        float vx = (s.x * s.x) / (2 * j.x) * multiplierAllSpeeds;
-        float vy = (s.y * s.y) / (2 * j.y) * multiplierAllSpeeds;
-        float vz = (s.z * s.z) / (2 * j.z) * multiplierAllSpeeds;
-        float vdir = 1 / (2 * Md) * multiplierAllSpeeds;
-
+        
+        //relative impulse putten into the v
+        float relImpulseX = s.x / j.x;
+        float relImpulseY = s.y / j.y;
+        float relImpulseZ = s.z / j.z;
+        float relImpulseDir = 1 / Md;
+        float scaler = impulsePower / (relImpulseX + relImpulseY + relImpulseZ + relImpulseDir);
+        float impulseX = relImpulseX * scaler;
+        float impulseY = relImpulseY * scaler;
+        float impulseZ = relImpulseZ * scaler;
+        float impulseDir = impulsePower;
 
         //angular Velocities
-        float wx = vx / s.x;
-        float wy = vy / s.y;
-        float wz = vz / s.z;
-        //Debug.Log("vx= " + vx + "  vy= " + vy + "  vz= " + vz + "  vdir= " + vdir);
-        //Debug.Log("wx= " + wx + "  wy= " + wy + "  wz= " + wz + "  vdir= "+vdir + "  allMultiplier= "+multiplierAllSpeeds+"  neededV= "+neededV);
-        //Debug.Log("neededFullMassImpulse= " + (neededV * mass));
-        //kinetic Energy of each speed
-        float kx = 0.5f * j.x * Mathf.Pow(wx, 2);
-        float ky = 0.5f * j.y * Mathf.Pow(wy, 2);
-        float kz = 0.5f * j.z * Mathf.Pow(wz, 2); //2
-        float kdir = 0.5f * Md * Mathf.Pow(vdir, 2); //2
-        float totalK = kx + ky + kz + kdir; //4  //2
-        float scaledK = Mathf.Sqrt(Mathf.Pow(kx, 2) + Mathf.Pow(ky, 2) + Mathf.Pow(kz, 2) + Mathf.Pow(kdir, 2));
-        float scaler = scaledK / totalK;
-        neededImpulse = (wx * j.x + wy * j.y + wz * j.z + vdir * Md) * scaler;
-        //needsCancle = neededImpulse < ImpulseDirToCancleCurrent.magnitude;
-        angularChange = transform.TransformDirection(new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z));
-        directionalChange = ImpulseDirToCancleCurrent.normalized * vdir;
-        //Debug.Log("calcedImpulse= " + neededImpulse);
+        float wx = angularDirections.x * impulseX / j.x;
+        float wy = angularDirections.y * impulseY / j.y;
+        float wz = angularDirections.z * impulseZ / j.z;
+
+        float vx = impulseX * s.x / j.x;
+        float vy = impulseY * s.y / j.y;
+        float vz = impulseZ * s.z / j.z;
+        float vdir = impulseDir / Md;
+        float totalV = vx + vy + vz + vdir;
+
+        //(float maxV, Vector3 maxW, Vector3 rotToV) output = (totalV, new Vector3(wx, wy, wz), new Vector3(s.x*angularDirections.x, s.y * angularDirections.y, s.y * angularDirections.y));
+        return (totalV, vdir, new Vector3(wx, wy, wz), new Vector3(s.x * angularDirections.x, s.y * angularDirections.y, s.z * angularDirections.z), ImpulseDirToCancleCurrent.normalized);
+
+
+
+        ////Debug.Log("vx= " + vx + "  vy= " + vy + "  vz= " + vz + "  vdir= " + vdir);
+        ////Debug.Log("wx= " + wx + "  wy= " + wy + "  wz= " + wz + "  vdir= "+vdir + "  allMultiplier= "+multiplierAllSpeeds+"  neededV= "+neededV);
+        ////Debug.Log("neededFullMassImpulse= " + (neededV * mass));
+
+        ////kinetic Energy of each speed
+        //float kx = 0.5f * j.x * Mathf.Pow(wx, 2);
+        //float ky = 0.5f * j.y * Mathf.Pow(wy, 2);
+        //float kz = 0.5f * j.z * Mathf.Pow(wz, 2); //2
+        ////float kdir = 0.5f * Md * Mathf.Pow(vdir, 2); //2
+        //float kdir = 0.5f * Md * Mathf.Pow(vdir, 2);
+        //float totalK = kx + ky + kz + kdir; //4  //2
+        //float scaledK = Mathf.Sqrt(Mathf.Pow(kx, 2) + Mathf.Pow(ky, 2) + Mathf.Pow(kz, 2) + Mathf.Pow(kdir, 2));
+        //float scaler = scaledK / totalK;
+        ////neededImpulse = (wx * j.x + wy * j.y + wz * j.z + vdir * Md) * scaler;
+        //neededImpulse = (wx * j.x + wy * j.y + wz * j.z + vdir * Md) * scaler;
+        ////needsCancle = neededImpulse < ImpulseDirToCancleCurrent.magnitude;
+        ////angularChange = transform.TransformDirection(new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z));
+        //angularChange = new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z);
+        ////directionalChange = ImpulseDirToCancleCurrent.normalized * vdir;
+        //directionalChange = ImpulseDirToCancleCurrent.normalized * vdir;
+        ////Debug.Log("calcedImpulse= " + neededImpulse);
+
     }
 
+    //based on Nathan Reeds answer on https://gamedev.stackexchange.com/questions/70355/inertia-tensor-and-world-coordinate-conversion (05.12.23)
+    Vector3 GetInertiaTensorInWorldSpace()
+    {
+        // Erhalte die Rotationsmatrix der Welt
+        Matrix4x4 worldRotationMatrix = Matrix4x4.Rotate(rb.rotation);
 
+        // Erhalte die lokale Trägheitstensor-Matrix
+        Matrix4x4 localInertiaTensor = Matrix4x4.zero;
+        localInertiaTensor.m00 = rb.inertiaTensor.x;
+        localInertiaTensor.m11 = rb.inertiaTensor.y;
+        localInertiaTensor.m22 = rb.inertiaTensor.z;
 
+        // Transformiere den lokalen Trägheitstensor in Weltkoordinaten
+        Matrix4x4 worldInertiaTensorMatrix = worldRotationMatrix * localInertiaTensor * worldRotationMatrix.inverse;
+
+        // Extrahiere die skalierten Hauptachsen
+        Vector3 worldInertiaTensor = new Vector3(worldInertiaTensorMatrix.m00, worldInertiaTensorMatrix.m11, worldInertiaTensorMatrix.m22);
+
+        return worldInertiaTensor;
+    }
+
+    Vector3 GetActualPointVelocity(Vector3 point)
+    {
+        Vector3 pointVelDir = rb.velocity + rb.GetAccumulatedForce() * Time.fixedDeltaTime / rb.mass;
+        Vector3 rotImpulse = rb.GetAccumulatedTorque() * Time.fixedDeltaTime;
+        Vector3 addedRot = new Vector3(rotImpulse.x / inertiaTensorWS.x, rotImpulse.y / inertiaTensorWS.y, rotImpulse.z / inertiaTensorWS.z);
+        Vector3 pointVelRot = Vector3.Cross(rb.angularVelocity+addedRot,point - rb.worldCenterOfMass);
+        return (pointVelDir + pointVelRot + Physics.gravity*Time.fixedDeltaTime); //gravity is not counted in accumulatedForce, so it is dont here
+    }
+
+    Vector3 GetLiftedPoint(Vector3 point, float lift) //lift point up towards the center of mass
+    {
+        Vector3 pointInLocalSpace = transform.InverseTransformPoint(point);
+        Vector3 liftedPointInLocalSpace = new Vector3(pointInLocalSpace.x, Mathf.Lerp(pointInLocalSpace.y,rb.centerOfMass.y, lift), pointInLocalSpace.z);
+        return transform.TransformPoint(liftedPointInLocalSpace); //=liftedPointInWorldSpace
+    }
 }

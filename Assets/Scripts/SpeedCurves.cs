@@ -7,16 +7,13 @@ using UnityEngine;
 [Serializable]
 public class CurveHolder
 {
-    //public AutoCalculate autoCalculate = AutoCalculate.TopSpeed;
+
     public float timeNeeded = 2;
-    //public float distance = 5;
     public float topSpeed = 1;
-    //[HideInInspector]
-    //public virtual float AverageSpeed { get { return distance / timeNeeded; } }
-    [Tooltip("Curve must be STRICTLY MONOTONICALLY DECREASING")]
+
     public AnimationCurve curve = new AnimationCurve();
-    [HideInInspector]
-    public AnimationCurve invertedCurve;
+    //[HideInInspector]
+    public AnimationCurve invertedCurve = new AnimationCurve();
     [HideInInspector]
     public float minGradient = 0.01f; //vorher 0.025f
     [HideInInspector]
@@ -38,12 +35,14 @@ public class CurveHolder
         if(speed<0) return rawAccelerationValues[0]; //TEMPORARY SOLUTION, MIGHT BE REPLACED WITH BREAKING WHILE BACKWARDS DRIVING
         if (speed > topSpeed) return 0;
         float timeInCurve = invertedCurve.Evaluate(speed / topSpeed);
-        Debug.Log("time in curve= " + timeInCurve);
+        //Debug.Log("time in curve= " + timeInCurve);
         float sampleValue = timeInCurve * (accuracyOfAccelerationValues + 1);
         int fromSample = Mathf.FloorToInt(sampleValue);
-        int toSample = Mathf.CeilToInt(timeInCurve);
-        Debug.Log("from sample= " + fromSample);
-        Debug.Log("accel at sample= " + rawAccelerationValues[fromSample]);
+        int toSample = Mathf.CeilToInt(sampleValue);
+        if (toSample > accuracyOfAccelerationValues) toSample -= 1;
+        //Debug.Log("from sample= " + fromSample);
+        //Debug.Log("to sample= " + toSample);
+        //Debug.Log("accel at sample= " + rawAccelerationValues[fromSample]);
         float scaleBetween = sampleValue - fromSample; //scale from 0 to 1 between the two samples
         return Mathf.Lerp(rawAccelerationValues[fromSample], rawAccelerationValues[toSample], scaleBetween)*topSpeed/timeNeeded;
     }
