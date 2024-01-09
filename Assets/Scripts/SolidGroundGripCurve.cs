@@ -24,11 +24,12 @@ public class GripCurve
 
     public virtual void SetKeyNumber(int keyNumber)
     {
-        while (curve.length != 3)
+        while (curve.length != keyNumber)
         {
-            if (curve.length < 3)
+            if (curve.length < keyNumber)
             {
-                curve.AddKey(curve.keys[curve.length - 1].time + 0.1f, 0.5f);
+                float usedTime = curve.length < 1 ? 0 : curve.keys[curve.length - 1].time+0.1f;
+                curve.AddKey( usedTime, 0.5f);
             }
             else
             {
@@ -45,6 +46,8 @@ public class GripCurve
     }
 
 }
+
+[Serializable]
 public class SolidGrounGrip : GripCurve
 {
     public float gripAtNoSlide { get; } = 0.3f;
@@ -54,29 +57,42 @@ public class SolidGrounGrip : GripCurve
     {
         SetKeyNumber(3);
 
-        curve.keys[0].time = 0;
-        if (curve.keys[0].value < 0.05f) curve.keys[0].value = 0.05f;
-        else if (curve.keys[0].value > 0.95f) curve.keys[0].value = 0.95f;
-        curve.keys[1].value = 1;
-        if (curve.keys[1].time < 0.05f) curve.keys[1].time = 0.05f;
-        else if (curve.keys[1].time > 0.95f) curve.keys[1].time = 0.95f;
-        curve.keys[2].time = 1;
-        if (curve.keys[2].value < 0.05f) curve.keys[2].value = 0.05f;
-        else if (curve.keys[2].value > 0.95f) curve.keys[2].value = 0.95f;
+        Keyframe k0 = curve.keys[0];
+        Keyframe k1 = curve.keys[1];
+        Keyframe k2 = curve.keys[2];
 
-        //curve.keys[0].outWeight = 0;
-        //curve.keys[1].inWeight = 0;
-        //curve.keys[1].outWeight = 0;
-        //curve.keys[2].inWeight = 0;
+        k0.time = 0;
+        if (k0.value < 0.05f) k0.value = 0.05f;
+        else if (k0.value > 0.95f) k0.value = 0.95f;
+        k1.value = 1;
+        if (k1.time < 0.05f) k1.time = 0.05f;
+        else if (k1.time > 0.95f) k1.time = 0.95f;
+        k2.time = 1;
+        if (k2.value < 0.05f) k2.value = 0.05f;
+        else if (k2.value > 0.95f) k2.value = 0.95f;
 
-        curve.keys[0].weightedMode = WeightedMode.None;
-        curve.keys[1].weightedMode = WeightedMode.None;
-        curve.keys[2].weightedMode = WeightedMode.None;
+        k0.outWeight = 0;
+        k1.inWeight = 0;
+        k1.outWeight = 0;
+        k2.inWeight = 0;
 
+        k0.outTangent = 0;
+        k1.inTangent = 0;
+        k1.outTangent = 0;
+        k2.inTangent = 0;
+
+        k0.weightedMode = WeightedMode.Both;
+        k1.weightedMode = WeightedMode.Both;
+        k2.weightedMode = WeightedMode.Both;
+
+        curve.MoveKey(0, k0);
+        curve.MoveKey(1, k1);
+        curve.MoveKey(2, k2);
+        //Debug.Log("validated SolidGroundCurve");
     }
 }
 
-
+[Serializable]
 public class LooseGrounGrip : GripCurve
 {
     public float gripAtNoSlide { get; } = 0.3f;
@@ -85,9 +101,8 @@ public class LooseGrounGrip : GripCurve
     {
         SetKeyNumber(2);
 
-        curve.keys[0].time = 0;
-        curve.keys[1].time = 1;
-        curve.keys[1].value = 1;
+        //curve.keys[0].time = 0;
+        
 
         //float maxTangent = 1 - curve.keys[0].value;
         //if(curve.keys[0].outTangent > maxTangent) curve.keys[0].outTangent = maxTangent;
@@ -98,7 +113,7 @@ public class LooseGrounGrip : GripCurve
         //curve.keys[0].outWeight = 0;
         //curve.keys[1].inWeight = 0;
 
-        float minGradient = 0;
+        float minGradient = 0.001f;
         for (int i = 0; i < curve.length; i++)
         {
             Keyframe key = curve.keys[i];
@@ -106,22 +121,25 @@ public class LooseGrounGrip : GripCurve
 
 
             //assign vars and adjust tangents' angles
-            if (i < curve.length - 1)
+            if (i == 0)
             {
-                    if (key.outTangent < minGradient) key.outTangent = minGradient;
-                    else if (key.outTangent > 1 / minGradient) key.outTangent = 1 / minGradient;
+                key.time = 0;
+                if (key.value < 0.00f) key.value = 0.00f;
+                else if (key.value > 0.95f) key.value = 0.95f;
+                if (key.outTangent < minGradient) key.outTangent = minGradient;
+                else if (key.outTangent > 1 / minGradient) key.outTangent = 1 / minGradient;
             }
-            if (i > 0)
+            if (i == 1)
             {
-
-                //winkel anpassen
-                    if (key.inTangent < minGradient) key.inTangent = minGradient;
-                    else if (key.inTangent > 1 / minGradient) key.inTangent = 1 / minGradient;
+                key.time = 1;
+                key.value = 1;
+                if (key.inTangent < minGradient) key.inTangent = minGradient;
+                else if (key.inTangent > 1 / minGradient) key.inTangent = 1 / minGradient;
             }
 
 
             //adjust tangents' weights
-            if (i < curve.length - 1)
+            if (i == 0)
             {
                 Keyframe followingKey = curve.keys[i + 1];
                 float timeDiffToFollowing = followingKey.time - key.time;
@@ -133,7 +151,7 @@ public class LooseGrounGrip : GripCurve
                     key.outWeight = weightCap;
                 }
             }
-            if (i > 0)
+            if (i == 1)
             {
                 Keyframe previousKey = curve.keys[i - 1];
                 float timeDiffFromPrevious = key.time - previousKey.time;

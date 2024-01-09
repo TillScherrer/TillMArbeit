@@ -12,7 +12,7 @@ public class CurveHolder
     public float topSpeed = 1;
 
     public AnimationCurve curve = new AnimationCurve();
-    //[HideInInspector]
+    [HideInInspector]
     public AnimationCurve invertedCurve = new AnimationCurve();
     [HideInInspector]
     public float minGradient = 0.01f; //vorher 0.025f
@@ -29,12 +29,13 @@ public class CurveHolder
     public float[] rawAccelerationValues;
     private readonly int accuracyOfAccelerationValues = 100;
 
-    public float GetAccelerationValueOfSpeed(float speed)
+    public float GetAccelerationValueForSpeed(float speed)
     {
         //BEDINGUNG BEI SPEED UNTER 0 FEHLT!!!!!!!!!!!!!!!!!!!!!!!
-        if(speed<0) return rawAccelerationValues[0]; //TEMPORARY SOLUTION, MIGHT BE REPLACED WITH BREAKING WHILE BACKWARDS DRIVING
+        //if(speed<0) return rawAccelerationValues[0]; //TEMPORARY SOLUTION, MIGHT BE REPLACED WITH BREAKING WHILE BACKWARDS DRIVING
+        speed = Mathf.Abs(speed);
         if (speed > topSpeed) return 0;
-        float timeInCurve = invertedCurve.Evaluate(speed / topSpeed);
+        float timeInCurve = GetTimeInCurve(speed);
         //Debug.Log("time in curve= " + timeInCurve);
         float sampleValue = timeInCurve * (accuracyOfAccelerationValues + 1);
         int fromSample = Mathf.FloorToInt(sampleValue);
@@ -45,6 +46,12 @@ public class CurveHolder
         //Debug.Log("accel at sample= " + rawAccelerationValues[fromSample]);
         float scaleBetween = sampleValue - fromSample; //scale from 0 to 1 between the two samples
         return Mathf.Lerp(rawAccelerationValues[fromSample], rawAccelerationValues[toSample], scaleBetween)*topSpeed/timeNeeded;
+    }
+
+    public float GetTimeInCurve(float speed)
+    {
+        Mathf.Abs(speed);
+        return invertedCurve.Evaluate(speed / topSpeed);
     }
 
     public void ValidateRawAccelerationValues()

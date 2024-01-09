@@ -15,8 +15,23 @@ public class Car : MonoBehaviour
 {
     [SerializeField] SpeedupCurve speedupCurve;
     public SpeedupCurve SpeedupCurve { get => speedupCurve; set => speedupCurve = value; }
+    public SolidGrounGrip FrontGripOnSolidGround { get => frontGripOnSolidGround; set => frontGripOnSolidGround = value; }
+    public LooseGrounGrip FrontGripOnLooseGround { get => frontGripOnLooseGround; set => frontGripOnLooseGround = value; }
+    public SolidGrounGrip RearGripOnSolidGround { get => rearGripOnSolidGround; set => rearGripOnSolidGround = value; }
+    public LooseGrounGrip RearGripOnLooseGround { get => rearGripOnLooseGround; set => rearGripOnLooseGround = value; }
 
-
+    //gear Settings
+    [SerializeField] int numberOfGears = 1;
+    public List<float> gearIsBestAtRelSpeed = new List<float>();
+    [SerializeField] float gearImpactOnAcceleration = 0;
+    float gearScaleAtMinimum = 1;
+    float gearScaleDiff = 0;
+    [SerializeField] float gearOutDuration = 0.1f;
+    [SerializeField] float shiftDuration = 0.1f;
+    [SerializeField] float gearInDuration = 0.1f;
+    [SerializeField] float shiftingImpactOnAcceleration = 0;
+    [SerializeField] GearShiftMode gearShiftMode = GearShiftMode.Automatic;
+    //front wheel physical position and spring settings
     [SerializeField] bool showFrontWheelSettings;
     [SerializeField] Vector3 frontRightWheelCenter = new Vector3(1, -0.3f, 1);
     [SerializeField] float frontWheelRadius = 0.25f;
@@ -27,8 +42,7 @@ public class Car : MonoBehaviour
     [SerializeField] float frontWheelSuspensionDistanceToLiftCarWeight = 0.1f;
     [SerializeField] float frontWheelDamping = 0.4f;
     [SerializeField] float frontSuspHardCap = 0.2f;
-
-
+    //rear wheel physical position and spring settings
     [SerializeField] bool showRearWheelSettings;
     [SerializeField] Vector3 rearRightWheelCenter = new Vector3(1, -0.3f, -1);
     [SerializeField] float rearWheelRadius = 0.25f;
@@ -39,11 +53,12 @@ public class Car : MonoBehaviour
     [SerializeField] float rearWheelSuspensionDistanceToLiftCarWeight = 0.1f;
     [SerializeField] float rearWheelDamping = 0.4f;
     [SerializeField] float rearSuspHardCap = 0.2f;
-
+    //spring context
     [SerializeField] bool springsByDefaultGravity = true;
     [SerializeField] float springsByOtherValue = -10f;
     [SerializeField] float lateralAttackHeightLift = 0f; //AUSWIRKUNGEN NOCH NICHT IMPLEMENTIERT
     [SerializeField] float longitudalAttackHeightLift = 0f; //AUSWIRKUNGEN NOCH NICHT IMPLEMENTIERT
+    //anti-roll-bar
     [SerializeField] float frontAntiRollBar = 0f;
     [SerializeField] float rearAntiRollBar = 0f;
     //[SerializeField] float frontAntiRollBar = 0f;
@@ -52,12 +67,46 @@ public class Car : MonoBehaviour
     [SerializeField] LayerMask solidGround;
     [SerializeField] LayerMask looseGround;
 
+    [SerializeField] float scaleGripWithSpringCompression = 1;
+    [SerializeField] float scaleGripWithDampingCompression = 0;
+    [SerializeField] float spreadGripFromNormalForceOnAllWheels = 0;
+
+    [SerializeField] bool sameGripSettingsForRearWheel;
     [SerializeField]
     private bool endlessFrontWheelGrip = false;
     [SerializeField]
     private bool endlessBackWheelGrip = false;
-    [SerializeField] private Grip frontWheelGrip;
-    [SerializeField] private Grip backWheelGrip;
+    //[SerializeField] private Grip frontWheelGrip;
+    //[SerializeField] private Grip backWheelGrip;
+
+    [SerializeField] SolidGrounGrip frontGripOnSolidGround;
+    [SerializeField] LooseGrounGrip frontGripOnLooseGround;
+
+    [SerializeField] SolidGrounGrip rearGripOnSolidGround = new SolidGrounGrip();
+    [SerializeField] LooseGrounGrip rearGripOnLooseGround = new LooseGrounGrip();
+
+
+    //Steering Section
+    [SerializeField] float ackermanSteering = 0;
+    [SerializeField] float maxSteerChangePerSecond = 3;
+    [SerializeField] float frontSteerAtZeroSpeed = 30;
+    [SerializeField] float frontSteerAt30MS = 15;
+    [SerializeField] float rearSteerAtZeroSpeed = -10;
+    [SerializeField] float rearSteerAt30MS = 5;
+    
+
+    //Input Section
+    [SerializeField] bool breakAtOtherDirectionInput = true;
+    [SerializeField] FadingKey ThrottleKey = new FadingKey();
+    [SerializeField] FadingKey BackwardThrottleKey = new FadingKey();
+    [SerializeField] KeyCode SteerLeftKey = KeyCode.A;
+    [SerializeField] KeyCode SteerRightKey = KeyCode.S;
+    [SerializeField] FadingKey BreakKey = new FadingKey();
+    [SerializeField] FadingKey HandbreakKey = new FadingKey();
+    [SerializeField] KeyCode GearShiftKey = KeyCode.LeftShift;
+    [SerializeField] KeyCode GearShiftUpKey = KeyCode.LeftShift;
+    [SerializeField] KeyCode GearShiftDownKey = KeyCode.CapsLock;
+    [SerializeField] KeyCode NitroKey = KeyCode.None;
 
     //public Vector3 FrontRightWheelCenter { get => frontRightWheelCenter;}
     //public Vector3 RearRightWheelCenter { get => rearRightWheelCenter; }
@@ -93,9 +142,23 @@ public class Car : MonoBehaviour
 
     //Active Parameters
     float[] previousSpringCompressions = new float[4];
-
+    int currentGear = 1;
+    int aimedGear = 1;
+    int prevGear = 1;
+    float timeSincePrevGear = 0;
     Vector3 inertiaTensorWS = Vector3.one;
+    float frontSteeringAngle = 0;
+    float rearSteeringAngle = 0;
 
+
+
+    //input bools
+    bool inputThrottle = false;
+    bool inputBackwardThrottle = false;
+    bool inputBreake = false;
+    bool inputGearShiftDown = false;
+    bool inputGearShiftUp = false;
+    bool inputNitro = false;
 
 
     // Start is called before the first frame update
@@ -142,18 +205,48 @@ public class Car : MonoBehaviour
         }
     }
 
-    void Update() { }
+    void Update() {
+        //input
+        float currentSpeed = Vector3.Dot(rb.velocity, transform.forward);
+        float currentRelSpeed = speedupCurve.GetTimeInCurve(currentSpeed);
+        ThrottleKey.IsPressed = (currentSpeed >= 0 || !breakAtOtherDirectionInput) && Input.GetKey(ThrottleKey.KeyboardInput);
+        BackwardThrottleKey.IsPressed = (currentSpeed <= 0 || !breakAtOtherDirectionInput) && Input.GetKey(BackwardThrottleKey.KeyboardInput);
+        BreakKey.IsPressed = breakAtOtherDirectionInput ? (currentSpeed > 0 ? Input.GetKey(BackwardThrottleKey.KeyboardInput) : currentSpeed < 0 ? Input.GetKey(ThrottleKey.KeyboardInput) : false) : Input.GetKey(BreakKey.KeyboardInput);
+        HandbreakKey.IsPressed = Input.GetKey(HandbreakKey.KeyboardInput);
+        if (gearShiftMode == GearShiftMode.ManualClickUpDown)
+        {
+            if (Input.GetKeyDown(KeyCode.LeftShift) && aimedGear < numberOfGears) aimedGear++; //shift gear up
+            if (Input.GetKeyDown(KeyCode.CapsLock) && aimedGear > -1) aimedGear--; //shift gear down
+        }
+        else if(gearShiftMode == GearShiftMode.ManualOneClick)
+        {
+            if (Input.GetKeyDown(KeyCode.CapsLock))
+            {
+                bool planGearShiftUp = gearIsBestAtRelSpeed[aimedGear] < currentRelSpeed;
+                if (aimedGear < 0) aimedGear++;
+                else
+                {
+                    if (planGearShiftUp && aimedGear < numberOfGears) aimedGear++; //shift gear up
+                    if (!planGearShiftUp && aimedGear > -1) aimedGear--; //shift gear down
+                }
+                
+            }
+        }
+        
+
+
+
+
+
+    }
 
 
     private void FixedUpdate()
     {
-        Debug.Log("newFramePointVel = " + rb.GetPointVelocity(Vector3.one));
+        //update World Space inertia tensor
         inertiaTensorWS = GetInertiaTensorInWorldSpace();
-        //Debug.Log("inertiaTensorLocal: " + rb.inertiaTensor + ",  in WS: " + inertiaTensorWS);
-        float[] steeringAngles = new float[] { 0, 0, 0, 0 };
-        //testSteering !!!!!!!!!
-        steeringAngles[0] = 20 * Input.GetAxis("Horizontal");
-        steeringAngles[1] = 20 * Input.GetAxis("Horizontal");
+
+
 
 
         //float currentTime= Time.realtimeSinceStartup;
@@ -194,8 +287,8 @@ public class Car : MonoBehaviour
                 //if it is not already in a state of extending the spring again
                 if (Vector3.Angle(rb.GetPointVelocity(hitPoints[i]), hitNormals[i]) > 90)
                 {
-                    Vector3 angularChange;
-                    Vector3 directionalChange;
+                    //Vector3 angularChange;
+                    //Vector3 directionalChange;
                     //ImpulseNeededToStopDirectionalMovementAtPoint(hitPoints[i], hitNormals[i], out angularChange, out directionalChange, out _);    //TESTWEISE AUSKOMMENTIERT!!!!!!
                     //rb.angularVelocity += angularChange;
                     //rb.velocity += directionalChange;
@@ -210,6 +303,24 @@ public class Car : MonoBehaviour
         }
 
         //TESTDRIVING
+        float currentSpeed = Vector3.Dot(rb.velocity, transform.forward);
+        float currentRelSpeed = speedupCurve.GetTimeInCurve(currentSpeed);
+        //set steering Angle
+        float frontSteerDifFor30ms = frontSteerAt30MS - frontSteerAtZeroSpeed;
+        float currentMaxFrontSteerAngle = (frontSteerAt30MS + frontSteerDifFor30ms * (2 * -Mathf.Pow(2, -Mathf.Abs(currentSpeed)/30) - 1)); //TO DO: DIESE FORMEL RICHTIG MACHEN, AUCH BEI DER ANZEIGE IM INSPECTOR TOOLTIP!
+        UpdateSteerAngle(ref frontSteeringAngle, currentMaxFrontSteerAngle);
+        float rearSteerDifFor30ms = rearSteerAt30MS - rearSteerAtZeroSpeed;
+        float currentMaxRearSteerAngle = (rearSteerAt30MS + rearSteerDifFor30ms * (2 * -Mathf.Pow(2, -Mathf.Abs(currentSpeed) / 30) - 1));
+        UpdateSteerAngle(ref rearSteeringAngle, currentMaxRearSteerAngle);
+        //TO DO: NOW USE ACKERMAN TO SET INDIVIDUAL STEERING ANGLE OF WHEELS
+        float[] steeringAngles = new float[] { 0, 0, 0, 0 };
+        steeringAngles[0] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
+        steeringAngles[1] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
+        steeringAngles[2] = rearSteeringAngle;
+        steeringAngles[3] = rearSteeringAngle;
+        Debug.Log("front Steering Angle = " + frontSteeringAngle);
+        Debug.Log("rear Steering Angle = " + rearSteeringAngle);
+
         Vector3[] fowardOnGround = new Vector3[4];
         float[] speedAtWheel = new float[4];
         for (int i = 0; i < 4; i++)
@@ -222,7 +333,7 @@ public class Car : MonoBehaviour
         float averatgeWheelSpeed = (speedAtWheel[0] + speedAtWheel[1] + speedAtWheel[2] + speedAtWheel[3]) / 4f;
         if (Input.GetKey(KeyCode.W))
         {
-            float acceleration = speedupCurve.GetAccelerationValueOfSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
+            float acceleration = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
             for (int i = 0; i < 4; i++)
             {
                 rb.AddForceAtPosition(fowardOnGround[i] * acceleration / 4f, hitPointForLongitudal[i]);
@@ -233,7 +344,7 @@ public class Car : MonoBehaviour
         }
         else if (Input.GetKey(KeyCode.S))
         {
-            float acceleration = speedupCurve.GetAccelerationValueOfSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
+            float acceleration = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(averatgeWheelSpeed)); //Remove Mathf.abs and replace with other curve later!!
             for (int i = 0; i < 4; i++)
             {
                 rb.AddForceAtPosition(-fowardOnGround[i] * acceleration / 4f, hitPointForLongitudal[i]);
@@ -266,12 +377,12 @@ public class Car : MonoBehaviour
             }
             else
             {
-                maxStopImpulse = verticalForces[i].magnitude * 20.9f * Time.fixedDeltaTime;//verticalForce.magnitude*0.1f * Time.fixedDeltaTime; //TEST VALUE!!!
+                maxStopImpulse = verticalForces[i].magnitude * 2.3f * Time.fixedDeltaTime;//verticalForce.magnitude*0.1f * Time.fixedDeltaTime; //TEST VALUE!!!
 
             }
            
             impulseProperties[i] = ImpulseNeededToStopDirectionalMovementAtPoint(hitPointForLateral[i], -slideDirections[i], maxStopImpulse); // , out angularChange1, out directionalChange1, out neededImpulseToStop);
-                                                                                                                                    //Debug.Log("IMP PROBS[" + i + "]  maxV=" + impulseProperties[i].maxV + ", maxVDir=" + impulseProperties[i].maxVDir + ", maxW=" + impulseProperties[i].maxW + ", rotToV=" + impulseProperties[i].rotToV + ", vDirection=" + impulseProperties[i].vDirection);
+            //Debug.Log("IMP PROBS[" + i + "]  maxV=" + impulseProperties[i].maxV + ", maxVDir=" + impulseProperties[i].maxVDir + ", maxW=" + impulseProperties[i].maxW + ", rotToV=" + impulseProperties[i].rotToV + ", vDirection=" + impulseProperties[i].vDirection);
 
             //Vector3 angularChange1;
             //Vector3 directionalChange1;
@@ -366,7 +477,9 @@ public class Car : MonoBehaviour
         }
         //Debug.Log("planned Ratios: " + plannedRatios[0] + ", " + plannedRatios[1] + ", " + plannedRatios[2] + ", " + plannedRatios[3]);
         //Debug.Log("angularChange= " + angularVelChange + ",   directionalChange=" + directionalVelChange);
-        rb.AddTorque(new Vector3(angularVelChange.x*inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
+        //rb.AddTorque(new Vector3(angularVelChange.x*inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
+        //local
+        rb.AddRelativeTorque(new Vector3(angularVelChange.x * inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
         rb.AddForce(directionalVelChange * rb.mass, ForceMode.Impulse);
 
 
@@ -493,26 +606,18 @@ public class Car : MonoBehaviour
 
     private (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection) ImpulseNeededToStopDirectionalMovementAtPoint(Vector3 hitPoint, Vector3 ImpulseDirToCancleCurrent, float impulsePower) //, out Vector3 angularChange, out Vector3 directionalChange, out float neededImpulse)
     {
-        //part of the currentSpeed going in opposide direction as the counteracting impulse 
-        //float neededV = Mathf.Abs(Vector3.Dot(rb.GetPointVelocity(Point), -ImpulseDirToCancleCurrent.normalized));
-        //if (neededV == 0)
-        //{
-        //    neededImpulse = 0;
-        //    angularChange = Vector3.zero;
-        //    directionalChange = Vector3.zero;
-        //    return;
-        //}
-        //Debug.Log("Point vel:" + rb.GetPointVelocity(Point));
-        //Debug.Log("vel to cancle out: " + neededV);
+        
 
         ////in local Space, because Unitys inertiaTensor is in local space   //OLD LOCAL SPACE   <----
-        //Vector3 localPoint = transform.InverseTransformPoint(Point);
+        Vector3 localPoint = transform.InverseTransformPoint(hitPoint);
         ////localPoint = new Vector3(localPoint.x * transform.localScale.x, localPoint.y * transform.localScale.y, localPoint.z * transform.localScale.z);
-        //Vector3 localDir = transform.InverseTransformDirection(ImpulseDirToCancleCurrent.normalized);
+        Vector3 localDir = transform.InverseTransformDirection(ImpulseDirToCancleCurrent.normalized);
         //Vector3 speedPerAngularVelocity = Vector3.Cross(localPoint, localDir); //how much one unit roation around each axis would move the point in direction of force
 
-
-        Vector3 speedPerAngularVelocity = Vector3.Cross(hitPoint - rb.worldCenterOfMass, ImpulseDirToCancleCurrent.normalized); //how much one unit roation around each axis would move the point in direction of force
+        //worldSpace
+        //Vector3 speedPerAngularVelocity = Vector3.Cross(hitPoint - rb.worldCenterOfMass, ImpulseDirToCancleCurrent.normalized); //how much one unit roation around each axis would move the point in direction of force
+        //local
+        Vector3 speedPerAngularVelocity = Vector3.Cross(localPoint - rb.centerOfMass, localDir); //how much one unit roation around each axis would move the point in direction of force
         Vector3 angularDirections = new Vector3(speedPerAngularVelocity.x > 0 ? 1 : speedPerAngularVelocity.x < 0 ? -1 : 0,
                                                 speedPerAngularVelocity.y > 0 ? 1 : speedPerAngularVelocity.y < 0 ? -1 : 0,
                                                 speedPerAngularVelocity.z > 0 ? 1 : speedPerAngularVelocity.z < 0 ? -1 : 0);
@@ -528,38 +633,20 @@ public class Car : MonoBehaviour
 
 
 
-        //all following interim results happen to appear very often in the main final equation, so they are calculated once here
-        //float Mx = j.x / (s.x * s.x);
-        //float My = j.y / (s.y * s.y);
-        //float Mz = j.z / (s.z * s.z);
+       
         float Md = rb.mass;
 
 
 
-        //float multiplierAllSpeeds = 2 * j.x * j.y * j.z * Md * neededV / (s.x * s.x * j.y * j.z * Md + s.y * s.y * j.x * j.z * Md + s.z * s.z * j.x * j.y * Md + j.x * j.y * j.z);
-        //multiplierAllSpeeds = Mathf.Abs(multiplierAllSpeeds);
-        ////speed provided by each rotation
-        //float vx = (s.x * s.x) / (2 * j.x) * multiplierAllSpeeds;
-        //float vy = (s.y * s.y) / (2 * j.y) * multiplierAllSpeeds;
-        //float vz = (s.z * s.z) / (2 * j.z) * multiplierAllSpeeds;
-        //float vdir = 1 / (2 * Md) * multiplierAllSpeeds;
-
-
-
-        ////relative speed Split:         //OLD PROPABLY DELETE COMPLETELY
-        //float vx = (s.x * s.x) / j.x;
-        //float vy = (s.y * s.y) / j.y;
-        //float vz = (s.z * s.z) / j.z;
-        //float vdir = 1 / Md;
-        //float totalImpulseCost = vx * j.x / s.x + vy * j.y / s.y + vz * j.z / s.z + 1; //the 1 being vdir*md;
-
         
+
+
         //relative impulse putten into the v
-        float relImpulseX = s.x / j.x;
-        float relImpulseY = s.y / j.y;
-        float relImpulseZ = s.z / j.z;
+        float relImpulseX = s.x;// / j.x;
+        float relImpulseY = s.y;// / j.y;
+        float relImpulseZ = s.z;// / j.z;
         float relImpulseDir = 1 / Md;
-        float scaler = impulsePower / (relImpulseX + relImpulseY + relImpulseZ + relImpulseDir);
+        float scaler = impulsePower;// / (relImpulseX + relImpulseY + relImpulseZ + relImpulseDir);
         float impulseX = relImpulseX * scaler;
         float impulseY = relImpulseY * scaler;
         float impulseZ = relImpulseZ * scaler;
@@ -578,8 +665,39 @@ public class Car : MonoBehaviour
 
         //(float maxV, Vector3 maxW, Vector3 rotToV) output = (totalV, new Vector3(wx, wy, wz), new Vector3(s.x*angularDirections.x, s.y * angularDirections.y, s.y * angularDirections.y));
         return (totalV, vdir, new Vector3(wx, wy, wz), new Vector3(s.x * angularDirections.x, s.y * angularDirections.y, s.z * angularDirections.z), ImpulseDirToCancleCurrent.normalized);
+        //part of the currentSpeed going in opposide direction as the counteracting impulse 
+        //float neededV = Mathf.Abs(Vector3.Dot(rb.GetPointVelocity(Point), -ImpulseDirToCancleCurrent.normalized));
+        //if (neededV == 0)
+        //{
+        //    neededImpulse = 0;
+        //    angularChange = Vector3.zero;
+        //    directionalChange = Vector3.zero;
+        //    return;
+        //}
+        //Debug.Log("Point vel:" + rb.GetPointVelocity(Point));
+        //Debug.Log("vel to cancle out: " + neededV);
+
+        //all following interim results happen to appear very often in the main final equation, so they are calculated once here
+        //float Mx = j.x / (s.x * s.x);
+        //float My = j.y / (s.y * s.y);
+        //float Mz = j.z / (s.z * s.z);
+
+        //float multiplierAllSpeeds = 2 * j.x * j.y * j.z * Md * neededV / (s.x * s.x * j.y * j.z * Md + s.y * s.y * j.x * j.z * Md + s.z * s.z * j.x * j.y * Md + j.x * j.y * j.z);
+        //multiplierAllSpeeds = Mathf.Abs(multiplierAllSpeeds);
+        ////speed provided by each rotation
+        //float vx = (s.x * s.x) / (2 * j.x) * multiplierAllSpeeds;
+        //float vy = (s.y * s.y) / (2 * j.y) * multiplierAllSpeeds;
+        //float vz = (s.z * s.z) / (2 * j.z) * multiplierAllSpeeds;
+        //float vdir = 1 / (2 * Md) * multiplierAllSpeeds;
 
 
+
+        ////relative speed Split:         //OLD PROPABLY DELETE COMPLETELY
+        //float vx = (s.x * s.x) / j.x;
+        //float vy = (s.y * s.y) / j.y;
+        //float vz = (s.z * s.z) / j.z;
+        //float vdir = 1 / Md;
+        //float totalImpulseCost = vx * j.x / s.x + vy * j.y / s.y + vz * j.z / s.z + 1; //the 1 being vdir*md;
 
         ////Debug.Log("vx= " + vx + "  vy= " + vy + "  vz= " + vz + "  vdir= " + vdir);
         ////Debug.Log("wx= " + wx + "  wy= " + wy + "  wz= " + wz + "  vdir= "+vdir + "  allMultiplier= "+multiplierAllSpeeds+"  neededV= "+neededV);
@@ -605,7 +723,7 @@ public class Car : MonoBehaviour
 
     }
 
-    //based on Nathan Reeds answer on https://gamedev.stackexchange.com/questions/70355/inertia-tensor-and-world-coordinate-conversion (05.12.23)
+    //Method based on "Nathan Reeds" answer on https://gamedev.stackexchange.com/questions/70355/inertia-tensor-and-world-coordinate-conversion (05.12.23)
     Vector3 GetInertiaTensorInWorldSpace()
     {
         // Erhalte die Rotationsmatrix der Welt
@@ -641,4 +759,136 @@ public class Car : MonoBehaviour
         Vector3 liftedPointInLocalSpace = new Vector3(pointInLocalSpace.x, Mathf.Lerp(pointInLocalSpace.y,rb.centerOfMass.y, lift), pointInLocalSpace.z);
         return transform.TransformPoint(liftedPointInLocalSpace); //=liftedPointInWorldSpace
     }
+
+    public void ValidateGearSettings()
+    {
+        if(numberOfGears<0)numberOfGears=0;
+        if(numberOfGears>16)numberOfGears=16;
+        for(int i=0; i < numberOfGears; i++)
+        {
+            if (i+1 > gearIsBestAtRelSpeed.Count)
+            {
+                gearIsBestAtRelSpeed.Add(i==0?0: gearIsBestAtRelSpeed[i - 1]);
+            }
+
+            if (i > 0)
+            {
+                if(gearIsBestAtRelSpeed[i] < gearIsBestAtRelSpeed[i - 1])
+                {
+                    gearIsBestAtRelSpeed[i] = gearIsBestAtRelSpeed[i - 1];
+                }
+            }
+        }
+        gearScaleAtMinimum = MinAccelerationScaleLookupTable.GetMinAccelerationScale(gearImpactOnAcceleration);
+        gearScaleDiff = gearImpactOnAcceleration - gearScaleAtMinimum;
+    }
+    float GetAccelerationScale(int currentGear, float currentSpeed)//toTo: Rückwärtsgang
+    {
+        if(currentGear==0) return 1;
+        if (gearImpactOnAcceleration == 0) return 1;
+
+        float currenSpeedRatio = speedupCurve.GetTimeInCurve(currentSpeed);
+
+        if(currenSpeedRatio > gearIsBestAtRelSpeed[currentGear])
+        {
+            float nextMinScaleReachedAt = GetShiftUpMoment(currentGear);
+            float distMaxToMin = nextMinScaleReachedAt - gearIsBestAtRelSpeed[currentGear];
+            float scaleDropPerRatioDistance = gearScaleDiff/distMaxToMin;
+            float currentRatioDistanceToMax = currenSpeedRatio - gearIsBestAtRelSpeed[currentGear];
+            return (gearImpactOnAcceleration - scaleDropPerRatioDistance * currentRatioDistanceToMax);
+        }
+        else
+        {
+            float previousMinScaleReachedAt = GetShiftDownMoment(currentGear);
+            float distMinToMax =  gearIsBestAtRelSpeed[currentGear] - previousMinScaleReachedAt;
+            float scaleDropPerRatioDistance = gearScaleDiff / distMinToMax;
+            float currentRatioDistanceToMax = gearIsBestAtRelSpeed[currentGear] - currenSpeedRatio;
+            return (gearImpactOnAcceleration - scaleDropPerRatioDistance * currentRatioDistanceToMax);
+        }
+    }
+
+    float GetShiftUpMoment(int currentGear)//toTo: Rückwärtsgang
+    {
+        return currentGear == (numberOfGears - 1) ? 1 : (gearIsBestAtRelSpeed[currentGear] + gearIsBestAtRelSpeed[currentGear + 1]) / 2;
+    }
+    float GetShiftDownMoment(int currentGear)//toTo: Rückwärtsgang
+    {
+        return currentGear == 1 ? 0 : (gearIsBestAtRelSpeed[currentGear] + gearIsBestAtRelSpeed[currentGear - 1]) / 2;
+    }
+
+    int GetBestGearForCurrentRelSpeed(float relSpeed)
+    {
+        if (relSpeed < 0) return -1;
+
+        float lowestDif = 100;
+        int gearOfLowestDif = 0;
+        for(int g=0; g<numberOfGears; g++)
+        {
+            float difToGearsOptimum = Mathf.Abs(relSpeed - gearIsBestAtRelSpeed[g]);
+            if (difToGearsOptimum < lowestDif)
+            {
+                lowestDif = difToGearsOptimum;
+                gearOfLowestDif = g;
+            }
+        }
+        return gearOfLowestDif;
+    }
+
+    void UpdateSteerAngle(ref float currentAngle, float maxAngle)
+    {
+        float maxDegreeChange = maxAngle * (maxSteerChangePerSecond / 100) * Time.fixedDeltaTime;
+
+        int steerInput = 0;
+        if (Input.GetKey(SteerRightKey)) steerInput++;
+        if (Input.GetKey(SteerLeftKey)) steerInput--;
+
+        if (steerInput == 0)
+        {
+            if (Mathf.Abs(currentAngle) < maxDegreeChange) currentAngle = 0;
+            else if (currentAngle > 0) currentAngle -= maxDegreeChange;
+            else currentAngle += maxDegreeChange;
+        }
+        else if (steerInput == 1) currentAngle += maxDegreeChange;
+        else if (steerInput == -1) currentAngle -= maxDegreeChange;
+
+
+        if (currentAngle > maxAngle) currentAngle = maxAngle;
+        if (currentAngle < -maxAngle) currentAngle = -maxAngle;
+    }
 }
+
+public enum GearShiftMode
+{
+    Automatic,
+    ManualOneClick,
+    ManualClickUpDown,
+}
+
+
+
+
+
+
+
+
+public static class MinAccelerationScaleLookupTable
+{
+    public static float[] lookupTable = new float[] { 1, 0.9900646f, 0.9802637f, 0.9705906f, 0.961041f, 0.9516158f, 0.9423141f, 0.9331286f, 0.9240597f, 0.9151053f, 0.906265f, 0.8975334f, 0.8889122f, 0.880394f, 0.8719826f, 0.8636732f, 0.8554645f, 0.8473539f, 0.8393438f, 0.8314257f, 0.8236029f, 0.8158737f, 0.8082352f, 0.8006854f, 0.7932246f, 0.7858496f, 0.7785599f, 0.7713528f, 0.7642288f, 0.7571859f, 0.7502251f, 0.7433472f, 0.7365316f, 0.7298009f, 0.7231455f, 0.7165642f, 0.7100525f, 0.7036151f, 0.6972478f, 0.6909504f, 0.6847193f, 0.6785581f, 0.6724701f, 0.6664329f, 0.6604667f, 0.6545649f, 0.6487243f, 0.6429468f, 0.6372294f, 0.6315734f, 0.6259766f, 0.6204367f, 0.6149564f, 0.6095314f, 0.6041619f, 0.5988486f, 0.5935898f, 0.588385f, 0.5832326f, 0.5781331f, 0.5730858f, 0.5680876f, 0.5631714f, 0.5582448f, 0.5533972f, 0.548597f, 0.5438461f, 0.5391414f, 0.5344839f, 0.5298703f, 0.5253034f, 0.5207834f, 0.5163078f, 0.5118713f, 0.5074816f, 0.5031323f, 0.4988257f, 0.4945617f, 0.4903395f, 0.486156f, 0.4820137f, 0.4779101f, 0.473846f, 0.469821f, 0.4658359f, 0.4618855f, 0.4579735f, 0.4540997f, 0.4502611f, 0.4464593f, 0.4426928f, 0.4389615f, 0.4352644f, 0.4316101f, 0.4279785f, 0.4243813f, 0.4208221f, 0.4172921f, 0.4137953f, 0.4103317f, 0.4069004f };
+
+    public static float GetMinAccelerationScale(float gearImpact)
+    {
+        float lookupTableGranularity = lookupTable.Length - 1;
+        if (gearImpact == 0) return 1;
+        else if(gearImpact == 1) return lookupTable[lookupTable.Length - 1];
+        else
+        {
+            float relativeValue = gearImpact*lookupTableGranularity;
+            float byClosestLowerValue = lookupTable[Mathf.FloorToInt(relativeValue)];
+            float byClosestUpperValue = lookupTable[Mathf.CeilToInt(relativeValue)];
+            float scale = relativeValue % 1;
+            return Mathf.Lerp(byClosestLowerValue, byClosestUpperValue, scale);
+        }
+    }
+}
+
+

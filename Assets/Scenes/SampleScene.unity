@@ -380,8 +380,8 @@ Transform:
   m_GameObject: {fileID: 292633334}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.2, z: -0}
-  m_LocalScale: {x: 1.72, y: 0.58, z: 3}
+  m_LocalPosition: {x: 0, y: 0.12, z: 0.38}
+  m_LocalScale: {x: 2.26, y: 0.58, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 518593528}
@@ -473,7 +473,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &382400557
 Transform:
   m_ObjectHideFlags: 0
@@ -695,8 +695,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speedupCurve:
-    timeNeeded: 3
-    topSpeed: 60
+    timeNeeded: 8
+    topSpeed: 30
     curve:
       serializedVersion: 2
       m_Curve:
@@ -848,25 +848,49 @@ MonoBehaviour:
     - 0.1945734
     - 0.18826127
     - 0.18222928
+  numberOfGears: 4
+  gearIsBestAtRelSpeed:
+  - 0.1
+  - 0.189
+  - 0.31
+  - 0.548
+  - 0.809
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  - 0.822
+  gearImpactOnAcceleration: 0.146
+  gearOutDuration: 0.047
+  shiftDuration: 0.118
+  gearInDuration: 0.089
+  shiftingImpactOnAcceleration: 1
+  gearShiftMode: 0
   showFrontWheelSettings: 1
   frontRightWheelCenter: {x: 1.06, y: -0.18, z: 1.77}
   frontWheelRadius: 0.36
-  frontUse3DWheelPhysics: 0
-  frontWheelInwardThickness: 0.75
-  frontWheelOutwardThickness: 0.26
+  frontUse3DWheelPhysics: 1
+  frontWheelInwardThickness: 0.01
+  frontWheelOutwardThickness: 0.17
   frontWheelShapeAccuracy: 9
   frontWheelSuspensionDistanceToLiftCarWeight: 0.27
-  frontWheelDamping: 5
+  frontWheelDamping: 1.76
   frontSuspHardCap: 1.64
   showRearWheelSettings: 1
   rearRightWheelCenter: {x: 0.93, y: -0.18, z: -1.96}
   rearWheelRadius: 0.3
-  rearUse3DWheelPhysics: 0
-  rearWheelInwardThickness: 0.1
-  rearWheelOutwardThickness: 0.01
+  rearUse3DWheelPhysics: 1
+  rearWheelInwardThickness: 0.04
+  rearWheelOutwardThickness: 0.13
   rearWheelShapeAccuracy: 12
   rearWheelSuspensionDistanceToLiftCarWeight: 0.21
-  rearWheelDamping: 5
+  rearWheelDamping: 1.95
   rearSuspHardCap: 1.39
   springsByDefaultGravity: 1
   springsByOtherValue: 10
@@ -880,10 +904,167 @@ MonoBehaviour:
   looseGround:
     serializedVersion: 2
     m_Bits: 55
-  endlessFrontWheelGrip: 1
-  endlessBackWheelGrip: 1
-  frontWheelGrip: {fileID: 11400000, guid: 002281d08594d4c4a8ab9830dfca4503, type: 2}
-  backWheelGrip: {fileID: 11400000, guid: 002281d08594d4c4a8ab9830dfca4503, type: 2}
+  scaleGripWithSpringCompression: 1
+  scaleGripWithDampingCompression: 0
+  spreadGripFromNormalForceOnAllWheels: 0
+  sameGripSettingsForRearWheel: 0
+  endlessFrontWheelGrip: 0
+  endlessBackWheelGrip: 0
+  frontGripOnSolidGround:
+    maxGrip: 2.46
+    definedUpToSlideSpeed: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.32062104
+        inSlope: 0.5417636
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.25024718
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.5912018
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  frontGripOnLooseGround:
+    maxGrip: 2
+    definedUpToSlideSpeed: 5
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 3.9143977
+        outSlope: 3.9143977
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: -Infinity
+        outWeight: 0.20992367
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0.08807311
+        outSlope: 0.08807311
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.3765903
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  rearGripOnSolidGround:
+    maxGrip: 2
+    definedUpToSlideSpeed: 5
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.5
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.33333334
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0.5
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  rearGripOnLooseGround:
+    maxGrip: 2
+    definedUpToSlideSpeed: 5
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.5
+        inSlope: 0
+        outSlope: 0.001
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0.001
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  ackermanSteering: 0
+  maxSteerChangePerSecond: 10.68
+  frontSteerAtZeroSpeed: 30
+  frontSteerAt30MS: 15
+  rearSteerAtZeroSpeed: 0
+  rearSteerAt30MS: 5
+  breakAtOtherDirectionInput: 1
+  ThrottleKey:
+    keyboardInput: 119
+    increasementTime: 0.2
+    decreasementTime: 0.15
+  BackwardThrottleKey:
+    keyboardInput: 115
+    increasementTime: 0.2
+    decreasementTime: 0.15
+  SteerLeftKey: 97
+  SteerRightKey: 100
+  BreakKey:
+    keyboardInput: 0
+    increasementTime: 0.2
+    decreasementTime: 0.15
+  HandbreakKey:
+    keyboardInput: 0
+    increasementTime: 0.2
+    decreasementTime: 0.15
+  GearShiftKey: 304
+  GearShiftUpKey: 304
+  GearShiftDownKey: 301
+  NitroKey: 0
 --- !u!4 &518593528
 Transform:
   m_ObjectHideFlags: 0
@@ -893,7 +1074,7 @@ Transform:
   m_GameObject: {fileID: 518593526}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00019525363, y: 0.22376038, z: -0.00085047557, w: 0.97464377}
-  m_LocalPosition: {x: 3.12, y: 0.65, z: -0.39}
+  m_LocalPosition: {x: 3.27, y: 0.81, z: -0.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -946,7 +1127,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &591670635
 Transform:
   m_ObjectHideFlags: 0
@@ -956,8 +1137,8 @@ Transform:
   m_GameObject: {fileID: 591670634}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: 0.885, y: -0.02, z: -1.96}
-  m_LocalScale: {x: 0.6, y: 0.055, z: 0.6}
+  m_LocalPosition: {x: 0.975, y: -0.18, z: -1.96}
+  m_LocalScale: {x: 0.6, y: 0.08499999, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -1657,7 +1838,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &892097814
 Transform:
   m_ObjectHideFlags: 0
@@ -1667,8 +1848,8 @@ Transform:
   m_GameObject: {fileID: 892097813}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -0.81499994, y: -0.18, z: 1.77}
-  m_LocalScale: {x: 0.72, y: 0.505, z: 0.72}
+  m_LocalPosition: {x: -1.14, y: -0.18, z: 1.77}
+  m_LocalScale: {x: 0.72, y: 0.09, z: 0.72}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -1831,7 +2012,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &989720686
 Transform:
   m_ObjectHideFlags: 0
@@ -1961,6 +2142,50 @@ LineRenderer:
   m_UseWorldSpace: 0
   m_Loop: 1
   m_ApplyActiveColorSpace: 0
+--- !u!1 &1022998826
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1022998828}
+  - component: {fileID: 1022998827}
+  m_Layer: 0
+  m_Name: LookupTable
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1022998827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1022998826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cf4b96776f50724a8223de7144133af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1022998828
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1022998826}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 8.988701, y: -4.594121, z: 12.620566}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1060727869
 GameObject:
   m_ObjectHideFlags: 0
@@ -3028,7 +3253,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1463543762
 Transform:
   m_ObjectHideFlags: 0
@@ -3038,8 +3263,8 @@ Transform:
   m_GameObject: {fileID: 1463543761}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: 0.81499994, y: -0.18, z: 1.77}
-  m_LocalScale: {x: 0.72, y: 0.505, z: 0.72}
+  m_LocalPosition: {x: 1.14, y: -0.18, z: 1.77}
+  m_LocalScale: {x: 0.72, y: 0.09, z: 0.72}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3202,7 +3427,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1601763906
 Transform:
   m_ObjectHideFlags: 0
@@ -3682,7 +3907,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1911015150
 Transform:
   m_ObjectHideFlags: 0
@@ -3829,7 +4054,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1942497288
 Transform:
   m_ObjectHideFlags: 0
@@ -3839,8 +4064,8 @@ Transform:
   m_GameObject: {fileID: 1942497287}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -0.885, y: -0.02, z: -1.96}
-  m_LocalScale: {x: 0.6, y: 0.055, z: 0.6}
+  m_LocalPosition: {x: -0.975, y: -0.18, z: -1.96}
+  m_LocalScale: {x: 0.6, y: 0.08499999, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3998,7 +4223,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &2075712833
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4139,3 +4364,4 @@ SceneRoots:
   - {fileID: 1713271631}
   - {fileID: 1401013971}
   - {fileID: 2075712838}
+  - {fileID: 1022998828}
