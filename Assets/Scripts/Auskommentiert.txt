@@ -1,0 +1,194 @@
+VON CAR:
+
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>> "FixedUpdate()"
+>>>>section: SIDEWARD FRICTION
+// , out angularChange1, out directionalChange1, out neededImpulseToStop);
+            //Debug.Log("IMP PROBS[" + i + "]  maxV=" + impulseProperties[i].maxV + ", maxVDir=" + impulseProperties[i].maxVDir + ", maxW=" + impulseProperties[i].maxW + ", rotToV=" + impulseProperties[i].rotToV + ", vDirection=" + impulseProperties[i].vDirection);
+
+            //Vector3 angularChange1;
+            //Vector3 directionalChange1;
+            //float neededImpulseToStop;
+            //Debug.Log("maxStopImpulse= " + maxStopImpuse + " neededImpulseToStop=" + neededImpulseToStop);
+            //if (maxStopImpuse < neededImpulseToStop * 0.25f) //REMOVE /10
+            //{
+            //    rb.AddForceAtPosition(-slideDirections[i] * maxStopImpuse, hitPoints[i], ForceMode.Impulse);
+
+            //    //rb.AddForceAtPosition(-slideDirection * neededImpulseToStop , hitPoints[i], ForceMode.Impulse);
+
+            //    //Debug.Log("currentImp= " + maxStopImpuse + "  to stop Imp= " + neededImpulseToStop);
+
+            //    //rb.angularVelocity += angularChange1; //TEST
+            //    //rb.velocity += directionalChange1; //TEST
+            //}
+            //else
+            //{
+            //    //Debug.Log("picked full stop");
+            //    //rb.AddForceAtPosition(-slideDirection * neededImpulseToStop * 0.4f, hitPoints[i], ForceMode.Impulse); //REMOVE /10
+            //    //rb.angularVelocity += angularChange1;
+            //    //rb.velocity += directionalChange1;
+            //    rb.AddForceAtPosition(-slideDirection * maxStopImpuse, hitPoints[i], ForceMode.Impulse); // TEST to always use maximum
+            //}
+
+
+
+
+>>>>>>>>>>>>>>>>>>> "ImpulseNeededToStopDirectionalMovementAtPoint(){}"
+//part of the currentSpeed going in opposide direction as the counteracting impulse 
+        //float neededV = Mathf.Abs(Vector3.Dot(rb.GetPointVelocity(Point), -ImpulseDirToCancleCurrent.normalized));
+        //if (neededV == 0)
+        //{
+        //    neededImpulse = 0;
+        //    angularChange = Vector3.zero;
+        //    directionalChange = Vector3.zero;
+        //    return;
+        //}
+        //Debug.Log("Point vel:" + rb.GetPointVelocity(Point));
+        //Debug.Log("vel to cancle out: " + neededV);
+
+        //all following interim results happen to appear very often in the main final equation, so they are calculated once here
+        //float Mx = j.x / (s.x * s.x);
+        //float My = j.y / (s.y * s.y);
+        //float Mz = j.z / (s.z * s.z);
+
+        //float multiplierAllSpeeds = 2 * j.x * j.y * j.z * Md * neededV / (s.x * s.x * j.y * j.z * Md + s.y * s.y * j.x * j.z * Md + s.z * s.z * j.x * j.y * Md + j.x * j.y * j.z);
+        //multiplierAllSpeeds = Mathf.Abs(multiplierAllSpeeds);
+        ////speed provided by each rotation
+        //float vx = (s.x * s.x) / (2 * j.x) * multiplierAllSpeeds;
+        //float vy = (s.y * s.y) / (2 * j.y) * multiplierAllSpeeds;
+        //float vz = (s.z * s.z) / (2 * j.z) * multiplierAllSpeeds;
+        //float vdir = 1 / (2 * Md) * multiplierAllSpeeds;
+
+
+        ////relative speed Split:         //OLD PROPABLY DELETE COMPLETELY
+        //float vx = (s.x * s.x) / j.x;
+        //float vy = (s.y * s.y) / j.y;
+        //float vz = (s.z * s.z) / j.z;
+        //float vdir = 1 / Md;
+        //float totalImpulseCost = vx * j.x / s.x + vy * j.y / s.y + vz * j.z / s.z + 1; //the 1 being vdir*md;
+
+        ////Debug.Log("vx= " + vx + "  vy= " + vy + "  vz= " + vz + "  vdir= " + vdir);
+        ////Debug.Log("wx= " + wx + "  wy= " + wy + "  wz= " + wz + "  vdir= "+vdir + "  allMultiplier= "+multiplierAllSpeeds+"  neededV= "+neededV);
+        ////Debug.Log("neededFullMassImpulse= " + (neededV * mass));
+
+        ////kinetic Energy of each speed
+        //float kx = 0.5f * j.x * Mathf.Pow(wx, 2);
+        //float ky = 0.5f * j.y * Mathf.Pow(wy, 2);
+        //float kz = 0.5f * j.z * Mathf.Pow(wz, 2); //2
+        ////float kdir = 0.5f * Md * Mathf.Pow(vdir, 2); //2
+        //float kdir = 0.5f * Md * Mathf.Pow(vdir, 2);
+        //float totalK = kx + ky + kz + kdir; //4  //2
+        //float scaledK = Mathf.Sqrt(Mathf.Pow(kx, 2) + Mathf.Pow(ky, 2) + Mathf.Pow(kz, 2) + Mathf.Pow(kdir, 2));
+        //float scaler = scaledK / totalK;
+        ////neededImpulse = (wx * j.x + wy * j.y + wz * j.z + vdir * Md) * scaler;
+        //neededImpulse = (wx * j.x + wy * j.y + wz * j.z + vdir * Md) * scaler;
+        ////needsCancle = neededImpulse < ImpulseDirToCancleCurrent.magnitude;
+        ////angularChange = transform.TransformDirection(new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z));
+        //angularChange = new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z);
+        ////directionalChange = ImpulseDirToCancleCurrent.normalized * vdir;
+        //directionalChange = ImpulseDirToCancleCurrent.normalized * vdir;
+        ////Debug.Log("calcedImpulse= " + neededImpulse);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+VON CAREDITOR:
+
+>>>>>>>>>>>>>>>>>>>>Guiupdate()
+>>>>section: GEARSHIFT
+
+                //GUILayout.Label("Shifting Mode:", new GUIStyle(EditorStyles.centeredGreyMiniLabel));               
+                //EditorGUILayout.BeginHorizontal();
+                //{
+                //    var previousColoru = GUI.backgroundColor;
+                //    if (hasAutomaticShifting.boolValue) GUI.backgroundColor = colorForRealism;
+                //    bool switchToDefaultGravity = GUILayout.Button("Automatic");
+                //    if (switchToDefaultGravity) hasAutomaticShifting.boolValue = true;
+                //    GUI.backgroundColor = hasAutomaticShifting.boolValue ? previousColoru : colorForRealism;
+                //    bool switchToCustomGravity = GUILayout.Button("Manuell");
+                //    if (switchToCustomGravity) hasAutomaticShifting.boolValue = false;
+                //    GUI.backgroundColor = previousColoru;
+                //}
+                //EditorGUILayout.EndHorizontal();
+                //currentH += lineH * 9+3;
+
+>>>>section: GRIP
+
+        //if (!endlessLengthwiseGrip.boolValue)
+        //{
+
+
+        //    car.FrontGripOnLooseGround.ValidateCurve();
+
+
+        //    car.FrontGripOnSolidGround.maxGrip = EditorGUILayout.FloatField("Grip Multiplicator", car.FrontGripOnSolidGround.maxGrip);
+        //    car.FrontGripOnSolidGround.definedUpToSlideSpeed = EditorGUILayout.FloatField("Sliding-speed Scale", car.FrontGripOnSolidGround.definedUpToSlideSpeed);
+
+
+        //    EditorGUILayout.LabelField("Settings for FRONT wheel on LOOSE Ground:");
+        //    car.FrontGripOnLooseGround.maxGrip = EditorGUILayout.FloatField("Grip Multiplicator", car.FrontGripOnLooseGround.maxGrip);
+        //    car.FrontGripOnLooseGround.definedUpToSlideSpeed = EditorGUILayout.FloatField("Sliding-speed Scale", car.FrontGripOnLooseGround.definedUpToSlideSpeed);
+        //    EditorGUILayout.CurveField("Grip at SlidingSpeed", car.FrontGripOnLooseGround.curve, colorForRealism + new Color(0.1f,0.1f,0.1f), new Rect(0, 0f, 1f, 1f));
+
+        //}
+        //GUI.backgroundColor = prevColor2;
+
+        //if (!endlessSidewaysGrip.boolValue)
+        //{
+        //    EditorGUI.indentLevel++;
+
+        //    sameGripSettingsForAllWheels.boolValue = EditorGUILayout.Toggle("Same Dynamic Grip Settings", sameGripSettingsForAllWheels.boolValue);
+        //    if(sameGripSettingsForAllWheels.boolValue && endlessLengthwiseGrip.boolValue)
+        //    {
+        //        EditorGUILayout.LabelField("-> Endless Rear Grip, just like Front Wheels");
+        //    }
+
+        //    if (!sameGripSettingsForAllWheels.boolValue)
+        //    {
+        //        car.RearGripOnSolidGround.ValidateCurve();
+        //        car.RearGripOnLooseGround.ValidateCurve();
+
+        //        EditorGUILayout.LabelField("Settings for REAR wheel on SOLID Ground:");
+        //        car.RearGripOnSolidGround.maxGrip = EditorGUILayout.FloatField("Grip Multiplicator", car.RearGripOnSolidGround.maxGrip);
+        //        car.RearGripOnSolidGround.definedUpToSlideSpeed = EditorGUILayout.FloatField("Sliding-speed Scale", car.RearGripOnSolidGround.definedUpToSlideSpeed);
+        //        EditorGUILayout.CurveField("Grip at SlidingSpeed", car.RearGripOnSolidGround.curve, colorForRealism, new Rect(0, 0f, 1f, 1f));
+
+        //        EditorGUILayout.LabelField("Settings for REAR wheel on LOOSE Ground:");
+        //        car.RearGripOnLooseGround.maxGrip = EditorGUILayout.FloatField("Grip Multiplicator", car.RearGripOnLooseGround.maxGrip);
+        //        car.RearGripOnLooseGround.definedUpToSlideSpeed = EditorGUILayout.FloatField("Sliding-speed Scale", car.RearGripOnLooseGround.definedUpToSlideSpeed);
+        //        EditorGUILayout.CurveField("Grip at SlidingSpeed", car.RearGripOnLooseGround.curve, colorForRealism + new Color(0.1f, 0.1f, 0.1f), new Rect(0, 0f, 1f, 1f));
+        //    }
+        //    EditorGUI.indentLevel--;
+        //}
+
+                //EditorGUILayout.PropertyField(endlessBackWheelGrip);
+        //if (!endlessBackWheelGrip.boolValue)
+        //{
+        //    EditorGUI.indentLevel++;
+        //    EditorGUILayout.PropertyField(rearGripOnSolidGround);
+        //    EditorGUILayout.PropertyField(rearGripOnLooseGround);
+        //    car.RearGripOnSolidGround.ValidateCurve();
+        //    car.RearGripOnLooseGround.ValidateCurve();
+        //    EditorGUI.indentLevel--;
+        //}
+
+
+
+
+
+
+
+
+

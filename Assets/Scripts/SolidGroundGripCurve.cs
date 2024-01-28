@@ -51,15 +51,21 @@ public class GripCurve
 public class SolidGrounGrip : GripCurve
 {
     public float gripAtNoSlide { get; } = 0.3f;
-    public float maxGripAtRelSlide { get; } = 0.6f;
+    public float slipRatioOfMaxGrip { get; } = 0.6f;
+
+    public float slipRatioForFullSlide { get; } = 0.8f;
     public float gripInFullSlide { get; } = 0.5f;
+
+    float prevGripByK2 = 0.5f;
+    float prevGripByK3 = 0.5f;
     override public void ValidateCurve()
     {
-        SetKeyNumber(3);
+        SetKeyNumber(4);
 
         Keyframe k0 = curve.keys[0];
         Keyframe k1 = curve.keys[1];
         Keyframe k2 = curve.keys[2];
+        Keyframe k3 = curve.keys[3];
 
         k0.time = 0;
         if (k0.value < 0.05f) k0.value = 0.05f;
@@ -67,27 +73,42 @@ public class SolidGrounGrip : GripCurve
         k1.value = 1;
         if (k1.time < 0.05f) k1.time = 0.05f;
         else if (k1.time > 0.95f) k1.time = 0.95f;
-        k2.time = 1;
         if (k2.value < 0.05f) k2.value = 0.05f;
         else if (k2.value > 0.95f) k2.value = 0.95f;
+        if (k2.time < k1.time) k2.time = k1.time+0.02f;
+        else if (k2.time > 0.97f) k2.time = 0.97f;
+        k3.time = 1;
+        if (k3.value < 0.05f) k3.value = 0.05f;
+        else if (k3.value > 0.95f) k3.value = 0.95f;
 
         k0.outWeight = 0;
         k1.inWeight = 0;
         k1.outWeight = 0;
         k2.inWeight = 0;
+        k2.outWeight = 0;
+        k3.inWeight = 0;
 
         k0.outTangent = 0;
         k1.inTangent = 0;
         k1.outTangent = 0;
         k2.inTangent = 0;
+        k2.outTangent = 0;
+        k3.inTangent = 0;
 
         k0.weightedMode = WeightedMode.Both;
         k1.weightedMode = WeightedMode.Both;
         k2.weightedMode = WeightedMode.Both;
+        k3.weightedMode = WeightedMode.Both;
+
+        if (prevGripByK2 != k2.value) k3.value = k2.value;      //Slip Ratio of full Slide was changed by k2 (=change k3)
+        else if (prevGripByK3 != k3.value) k2.value = k3.value; //Slip Ratio of full Slide was changed by k2 (=change k2)
+        prevGripByK2 = k2.value;
+        prevGripByK3 = k3.value;
 
         curve.MoveKey(0, k0);
         curve.MoveKey(1, k1);
         curve.MoveKey(2, k2);
+        curve.MoveKey(3, k3);
         //Debug.Log("validated SolidGroundCurve");
     }
 }

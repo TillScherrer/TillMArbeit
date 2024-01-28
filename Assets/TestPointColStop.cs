@@ -65,7 +65,7 @@ public class TestPointColStop : MonoBehaviour
                 break;
             }
         }
-        Debug.Log("minAccel is " +maxMinAccel+", leading to a total time scale of "+ lastIterationTotalTimeSpend+" ");
+        //Debug.Log("minAccel is " +maxMinAccel+", leading to a total time scale of "+ lastIterationTotalTimeSpend+" ");
 
 
 
@@ -88,8 +88,8 @@ public class TestPointColStop : MonoBehaviour
         else if (hadTriggerPrevFrame == 1)
         {
             hadTriggerPrevFrame = 0;
-            Debug.Log("Vel at Point after Col = " + rb.GetPointVelocity(lastColPoint));
-            Debug.Log("Vel dir after Col = " + rb.velocity.y);
+            //Debug.Log("Vel at Point after Col = " + rb.GetPointVelocity(lastColPoint));
+            //Debug.Log("Vel dir after Col = " + rb.velocity.y);
 
             //in local Space, because Unitys inertiaTensor is in local space
             Vector3 localPoint = lastColPoint - rb.worldCenterOfMass;
@@ -107,7 +107,7 @@ public class TestPointColStop : MonoBehaviour
             float PVx = rb.angularVelocity.x * s.x * angularDirections.x;
             float PVy = rb.angularVelocity.y * s.y * angularDirections.y;
             float PVz = rb.angularVelocity.z * s.z * angularDirections.z;
-            Debug.Log("Vel from rotations after Col: x="+PVx+", y="+PVy+", z="+PVz);
+            //Debug.Log("Vel from rotations after Col: x="+PVx+", y="+PVy+", z="+PVz);
 
         }
         Debug.DrawRay(transform.TransformPoint(localSpaceLastColPoint), Vector3.up, Color.blue);
@@ -237,7 +237,7 @@ public class TestPointColStop : MonoBehaviour
         vx *= scaler;
         vy *= scaler;
         vz *= scaler;
-        Debug.Log("vd=" + vd + ", vx=" + vx + ", vy=" + vy + ", vz=" + vz);
+        //Debug.Log("vd=" + vd + ", vx=" + vx + ", vy=" + vy + ", vz=" + vz);
 
         //auskommentiert am 28.11.23
         //float multiplierAllSpeeds = 2 * j.x * j.y * j.z * mass * neededV / (s.x * s.x * j.y * j.z * mass + s.y * s.y * j.x * j.z * mass + s.z * s.z * j.x * j.y * mass + j.x * j.y * j.z);
@@ -270,12 +270,12 @@ public class TestPointColStop : MonoBehaviour
         float Ix = wx * j.x;
         float Iy = wy * j.y;
         float Iz = wz * j.z;
-        Debug.Log("Id=" + Id + ", Ix=" + Ix + ", Iy=" + Iy + ", Iz=" + Iz);
+        //Debug.Log("Id=" + Id + ", Ix=" + Ix + ", Iy=" + Iy + ", Iz=" + Iz);
 
         float impulseScaler = Mathf.Sqrt(Mathf.Pow(Ix, 2) + Mathf.Pow(Iy, 2) + Mathf.Pow(Iz, 2) + Mathf.Pow(Id, 2)) / (Id + Ix + Iy + Iz);
 
         neededImpulse = (Id + Ix + Iy + Iz);//*impulseScaler;
-        Debug.Log("neededImpulse= " + neededImpulse);
+        //Debug.Log("neededImpulse= " + neededImpulse);
         angularChange = new Vector3(wx * angularDirections.x, wy * angularDirections.y, wz * angularDirections.z);
         directionalChange = ImpulseDirToCancleCurrent * vd;
 

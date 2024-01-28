@@ -50,7 +50,7 @@ public class CurveHolder
 
     public float GetTimeInCurve(float speed)
     {
-        Mathf.Abs(speed);
+        speed = Mathf.Abs(speed);
         return invertedCurve.Evaluate(speed / topSpeed);
     }
 
@@ -59,7 +59,7 @@ public class CurveHolder
         //with an accuracy of 100 there are 101 samples from 0/100 to 100/100 on the curve
         //sample zero is the speed difference to the first one. Every other sample is the speed difference to the previouse one.
         rawAccelerationValues = new float[accuracyOfAccelerationValues+1];
-        rawAccelerationValues[0] = curve.Evaluate(1/accuracyOfAccelerationValues)*accuracyOfAccelerationValues;
+        rawAccelerationValues[0] = (curve.Evaluate((float)1 / accuracyOfAccelerationValues) - curve.Evaluate((float)(0) / accuracyOfAccelerationValues)) * accuracyOfAccelerationValues;
         for (int i = 1; i <= accuracyOfAccelerationValues; i++)
         {
             rawAccelerationValues[i] = (curve.Evaluate((float)i / accuracyOfAccelerationValues)- curve.Evaluate((float)(i-1) / accuracyOfAccelerationValues)) * accuracyOfAccelerationValues;
