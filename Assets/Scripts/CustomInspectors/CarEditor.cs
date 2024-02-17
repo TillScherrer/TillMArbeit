@@ -52,6 +52,7 @@ public class CarEditor : Editor
     //decceleration
     SerializedProperty slowByAirResistanceAt30ms;
     SerializedProperty airResistanceExponent;
+    SerializedProperty slowByRollFriction;
 
     //breaking Settings
     SerializedProperty breakMaxSlowdown;
@@ -113,7 +114,7 @@ public class CarEditor : Editor
     //SerializedProperty rearGripOnSolidGround;
     //SerializedProperty rearGripOnLooseGround;
 
-    //Fw = Front Wheel, Rw = Rear Wheel, Sg = Solide Ground, Lg = Loose Ground
+    //grip             (Fw = Front Wheel, Rw = Rear Wheel, Sg = Solide Ground, Lg = Loose Ground)
     SerializedProperty useSameGripMultipliersAsSolidGround;
     SerializedProperty FwSgLengthwiseGrip;
     SerializedProperty RwSgLengthwiseGrip;
@@ -212,6 +213,7 @@ public class CarEditor : Editor
         //decceleration settings
         slowByAirResistanceAt30ms = serializedObject.FindProperty("slowByAirResistanceAt30ms");
         airResistanceExponent = serializedObject.FindProperty("airResistanceExponent");
+        slowByRollFriction = serializedObject.FindProperty("slowByRollFriction");
         //breaking settings
         breakMaxSlowdown = serializedObject.FindProperty("breakMaxSlowdown");
         breakAppliedToFrontWheels = serializedObject.FindProperty("breakAppliedToFrontWheels");
@@ -518,6 +520,7 @@ public class CarEditor : Editor
             
             airResistanceExponent.floatValue = EditorGUILayout.Slider("Air Resistance Exponent", airResistanceExponent.floatValue, 1, 2);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Exponent should be 2 for Realistic Air Resistance Behaviour! (F = Area * Const * Speed^2) If you pick 1 the slowdown scales lineary with speed"));
+            slowByRollFriction.floatValue = EditorGUILayout.FloatField("Slow by Rolling Friction", slowByRollFriction.floatValue);
         }
         GUILayout.Space(10);
 

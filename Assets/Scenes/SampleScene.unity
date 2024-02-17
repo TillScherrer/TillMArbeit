@@ -244,13 +244,13 @@ GameObject:
   m_Component:
   - component: {fileID: 67874116}
   - component: {fileID: 67874117}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FL_Wheel_InAir
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &67874116
 Transform:
   m_ObjectHideFlags: 0
@@ -261,7 +261,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.93, y: -0.24000001, z: 1.46}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -307,7 +307,7 @@ LineRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 100
   m_Positions:
   - {x: 0, y: 1, z: 0}
   - {x: 0, y: 0.87, z: -0.5}
@@ -1082,7 +1082,7 @@ GameObject:
   m_Component:
   - component: {fileID: 382400557}
   - component: {fileID: 382400558}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FR_Wheel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1098,8 +1098,8 @@ Transform:
   m_GameObject: {fileID: 382400556}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1.06, y: -0.18, z: 1.77}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalPosition: {x: 0.93, y: -0.14, z: 1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -1966,6 +1966,7 @@ MonoBehaviour:
     - 0.03657341
     - 0.018918514
   rearOrFrontPowered: 1
+  limitSpeedForGrip: 0.5
   numberOfGears: 7
   gearIsBestAtRelSpeed:
   - 0.028
@@ -1974,7 +1975,7 @@ MonoBehaviour:
   - 0.294
   - 0.436
   - 0.61
-  - 0.796
+  - 0.8
   - 0.963
   - 0.963
   - 0.908
@@ -1984,7 +1985,7 @@ MonoBehaviour:
   - 0.99
   - 1
   - 1
-  gearImpactOnAcceleration: 0.25
+  gearImpactOnAcceleration: 0.112
   gearOutDuration: 0.07
   shiftDuration: 0.04
   gearInDuration: 0.15
@@ -1995,15 +1996,13 @@ MonoBehaviour:
   slowByRollFriction: 0.05
   breakMaxSlowdown: 10
   breakAppliedToFrontWheels: 1
-  breakAppliedToRearWheels: 1
   breakLessToOptimiseGrip: 1
   handBreakMaxSlowdown: 10
   handBreakAppliedToFrontWheels: 1
-  handBreakAppliedToRearWheels: 1
   handBreakLessToOptimiseGrip: 0
-  showFrontWheelSettings: 1
+  showFrontWheelSettings: 0
   frontRightWheelCenter: {x: 0.93, y: -0.14, z: 1.46}
-  frontWheelRadius: 0.36
+  frontWheelRadius: 0.34
   frontWheelRotationHoldsRatioOfSpeed: 0.0247
   frontUse3DWheelPhysics: 1
   frontWheelInwardThickness: 0.12
@@ -2012,9 +2011,9 @@ MonoBehaviour:
   frontWheelSuspensionDistanceToLiftCarWeight: 0.1
   frontWheelDamping: 3.65
   frontSuspHardCap: 0.08
-  showRearWheelSettings: 1
+  showRearWheelSettings: 0
   rearRightWheelCenter: {x: 0.95, y: -0.14, z: -1.46}
-  rearWheelRadius: 0.3
+  rearWheelRadius: 0.34
   rearWheelRotationHoldsRatioOfSpeed: 0.025
   rearUse3DWheelPhysics: 1
   rearWheelInwardThickness: 0.04
@@ -2041,79 +2040,7 @@ MonoBehaviour:
   sameGripSettingsForRearWheel: 0
   endlessLengthwiseGrip: 0
   endlessSidewaysGrip: 0
-  frontGripOnSolidGround:
-    maxGrip: 2.46
-    definedUpToSlideSpeed: 2
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0.32062104
-        inSlope: 0.5417636
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.13256377
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.97
-        value: 0.55803806
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 0.55803806
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: 0
-        outWeight: 0.33333334
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  frontGripOnLooseGround:
-    maxGrip: 2
-    definedUpToSlideSpeed: 5
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 3.9143977
-        outSlope: 3.9143977
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: -Infinity
-        outWeight: 0.20992367
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0.08807311
-        outSlope: 0.08807311
-        tangentMode: 0
-        weightedMode: 3
-        inWeight: 0.3765903
-        outWeight: 0.33333334
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  rearGripOnSolidGround:
+  gripOnSolidGround:
     maxGrip: 2
     definedUpToSlideSpeed: 5
     curve:
@@ -2129,7 +2056,7 @@ MonoBehaviour:
         inWeight: 0.33333334
         outWeight: 0
       - serializedVersion: 3
-        time: 0.1
+        time: 0.11272202
         value: 1
         inSlope: 0
         outSlope: 0
@@ -2138,8 +2065,8 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.97
-        value: 0.5
+        time: 0.3526718
+        value: 0.6741333
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -2148,7 +2075,7 @@ MonoBehaviour:
         outWeight: 0
       - serializedVersion: 3
         time: 1
-        value: 0.5
+        value: 0.6741333
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -2158,7 +2085,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  rearGripOnLooseGround:
+  gripOnLooseGround:
     maxGrip: 2
     definedUpToSlideSpeed: 5
     curve:
@@ -2172,7 +2099,7 @@ MonoBehaviour:
         tangentMode: 0
         weightedMode: 3
         inWeight: 0.33333334
-        outWeight: 0.33333334
+        outWeight: 0
       - serializedVersion: 3
         time: 1
         value: 1
@@ -2498,13 +2425,13 @@ GameObject:
   - component: {fileID: 591670635}
   - component: {fileID: 591670637}
   - component: {fileID: 591670636}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BR3D
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &591670635
 Transform:
   m_ObjectHideFlags: 0
@@ -2515,7 +2442,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 0.995, y: -0.14, z: -1.46}
-  m_LocalScale: {x: 0.6, y: 0.08499999, z: 0.6}
+  m_LocalScale: {x: 0.68, y: 0.08499999, z: 0.68}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -2580,13 +2507,13 @@ GameObject:
   m_Component:
   - component: {fileID: 694410172}
   - component: {fileID: 694410173}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FR_HardCap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &694410172
 Transform:
   m_ObjectHideFlags: 0
@@ -2596,8 +2523,8 @@ Transform:
   m_GameObject: {fileID: 694410171}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.93, y: 0.3, z: 1.46}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalPosition: {x: 0.93, y: 0.28000003, z: 1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3008,13 +2935,13 @@ GameObject:
   m_Component:
   - component: {fileID: 836420104}
   - component: {fileID: 836420105}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FR_Wheel_InAir
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &836420104
 Transform:
   m_ObjectHideFlags: 0
@@ -3025,7 +2952,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.93, y: -0.24000001, z: 1.46}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3154,13 +3081,13 @@ GameObject:
   m_Component:
   - component: {fileID: 887178555}
   - component: {fileID: 887178556}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BR_Wheel_InAir
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &887178555
 Transform:
   m_ObjectHideFlags: 0
@@ -3171,7 +3098,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.95, y: -0.24000001, z: -1.46}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3301,13 +3228,13 @@ GameObject:
   - component: {fileID: 892097814}
   - component: {fileID: 892097816}
   - component: {fileID: 892097815}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FL3D
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &892097814
 Transform:
   m_ObjectHideFlags: 0
@@ -3318,7 +3245,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: -0.90500003, y: -0.14, z: 1.46}
-  m_LocalScale: {x: 0.72, y: 0.095, z: 0.72}
+  m_LocalScale: {x: 0.68, y: 0.095, z: 0.68}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -3489,7 +3416,7 @@ GameObject:
   m_Component:
   - component: {fileID: 989720686}
   - component: {fileID: 989720687}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BR_Wheel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3785,13 +3712,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1060727870}
   - component: {fileID: 1060727871}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FL_HardCap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1060727870
 Transform:
   m_ObjectHideFlags: 0
@@ -3801,8 +3728,8 @@ Transform:
   m_GameObject: {fileID: 1060727869}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.93, y: 0.3, z: 1.46}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalPosition: {x: -0.93, y: 0.28000003, z: 1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -4258,6 +4185,89 @@ Transform:
   - {fileID: 1898054567}
   m_Father: {fileID: 2132056222}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1212818397
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1212818398}
+  - component: {fileID: 1212818400}
+  m_Layer: 0
+  m_Name: Camera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1212818398
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1212818397}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1488287624}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!20 &1212818400
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1212818397}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 3
+  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.3
+  far clip plane: 1000
+  field of view: 60
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 128
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
 --- !u!1 &1269526876
 GameObject:
   m_ObjectHideFlags: 0
@@ -4735,7 +4745,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1341275652}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: WheelGizmoHolder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4874,13 +4884,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1359526008}
   - component: {fileID: 1359526009}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BL_HardCap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1359526008
 Transform:
   m_ObjectHideFlags: 0
@@ -4890,8 +4900,8 @@ Transform:
   m_GameObject: {fileID: 1359526007}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.95, y: 0.31, z: -1.46}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalPosition: {x: -0.95, y: 0.35000002, z: -1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -5304,13 +5314,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1445386479}
   - component: {fileID: 1445386480}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BR_HardCap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1445386479
 Transform:
   m_ObjectHideFlags: 0
@@ -5320,8 +5330,8 @@ Transform:
   m_GameObject: {fileID: 1445386478}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.95, y: 0.31, z: -1.46}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalPosition: {x: 0.95, y: 0.35000002, z: -1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -5547,13 +5557,13 @@ GameObject:
   - component: {fileID: 1463543762}
   - component: {fileID: 1463543764}
   - component: {fileID: 1463543763}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FR3D
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1463543762
 Transform:
   m_ObjectHideFlags: 0
@@ -5564,7 +5574,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 0.90500003, y: -0.14, z: 1.46}
-  m_LocalScale: {x: 0.72, y: 0.095, z: 0.72}
+  m_LocalScale: {x: 0.68, y: 0.095, z: 0.68}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -5867,7 +5877,8 @@ Transform:
   m_LocalPosition: {x: 1.3382635, y: 6.42, z: -4.0586247}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1212818398}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 18, y: 22.34, z: -0.104}
 --- !u!114 &1488287625
@@ -6126,7 +6137,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1601763906}
   - component: {fileID: 1601763907}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: FL_Wheel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -6142,8 +6153,8 @@ Transform:
   m_GameObject: {fileID: 1601763905}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.06, y: -0.18, z: 1.77}
-  m_LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+  m_LocalPosition: {x: -0.93, y: -0.14, z: 1.46}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -6635,13 +6646,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1872009408}
   - component: {fileID: 1872009409}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BL_Wheel_InAir
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1872009408
 Transform:
   m_ObjectHideFlags: 0
@@ -6652,7 +6663,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.95, y: -0.24000001, z: -1.46}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 1341275652}
@@ -6900,7 +6911,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1911015150}
   - component: {fileID: 1911015151}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BL_Wheel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -7153,13 +7164,13 @@ GameObject:
   - component: {fileID: 1942497288}
   - component: {fileID: 1942497290}
   - component: {fileID: 1942497289}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: BL3D
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1942497288
 Transform:
   m_ObjectHideFlags: 0
@@ -7170,7 +7181,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_LocalPosition: {x: -0.995, y: -0.14, z: -1.46}
-  m_LocalScale: {x: 0.6, y: 0.08499999, z: 0.6}
+  m_LocalScale: {x: 0.68, y: 0.08499999, z: 0.68}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1341275652}

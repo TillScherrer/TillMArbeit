@@ -18,15 +18,16 @@ public class Car : MonoBehaviour
 {
     
     public SpeedupCurve SpeedupCurve { get => speedupCurve; set => speedupCurve = value; }
-    public SolidGrounGrip FrontGripOnSolidGround { get => frontGripOnSolidGround; set => frontGripOnSolidGround = value; }
-    public LooseGrounGrip FrontGripOnLooseGround { get => frontGripOnLooseGround; set => frontGripOnLooseGround = value; }
-    public SolidGrounGrip RearGripOnSolidGround { get => rearGripOnSolidGround; set => rearGripOnSolidGround = value; }
-    public LooseGrounGrip RearGripOnLooseGround { get => rearGripOnLooseGround; set => rearGripOnLooseGround = value; }
+    public SolidGrounGrip FrontGripOnSolidGround { get => gripOnSolidGround; set => gripOnSolidGround = value; }
+    public LooseGrounGrip FrontGripOnLooseGround { get => gripOnLooseGround; set => gripOnLooseGround = value; }
+    //public SolidGrounGrip RearGripOnSolidGround { get => rearGripOnSolidGround; set => rearGripOnSolidGround = value; }
+    //public LooseGrounGrip RearGripOnLooseGround { get => rearGripOnLooseGround; set => rearGripOnLooseGround = value; }
     //public Vector3[] Wheel3DCenters { get => wheel3DCenters;}
 
     //acceleration
     [SerializeField] SpeedupCurve speedupCurve;
     [SerializeField] float rearOrFrontPowered = 1;
+    [SerializeField] float limitSpeedForGrip = 0.5f; //Todo: inspector
 
     //gear Settings
     [SerializeField] int numberOfGears = 1;
@@ -48,11 +49,11 @@ public class Car : MonoBehaviour
     //breaking Settings
     [SerializeField] float breakMaxSlowdown = 10f;
     [SerializeField] float breakAppliedToFrontWheels = 1f;
-    [SerializeField] float breakAppliedToRearWheels = 1f;
+    //[SerializeField] float breakAppliedToRearWheels = 1f;
     [SerializeField] float breakLessToOptimiseGrip = 1f;
     [SerializeField] float handBreakMaxSlowdown = 20f;
     [SerializeField] float handBreakAppliedToFrontWheels = 1f;
-    [SerializeField] float handBreakAppliedToRearWheels = 1f;
+    //[SerializeField] float handBreakAppliedToRearWheels = 1f;
     [SerializeField] float handBreakLessToOptimiseGrip = 0f;
 
 
@@ -111,11 +112,11 @@ public class Car : MonoBehaviour
     //[SerializeField] private Grip frontWheelGrip;
     //[SerializeField] private Grip backWheelGrip;
 
-    [SerializeField] SolidGrounGrip frontGripOnSolidGround;
-    [SerializeField] LooseGrounGrip frontGripOnLooseGround;
+    [SerializeField] SolidGrounGrip gripOnSolidGround;
+    [SerializeField] LooseGrounGrip gripOnLooseGround;
 
-    [SerializeField] SolidGrounGrip rearGripOnSolidGround = new SolidGrounGrip();
-    [SerializeField] LooseGrounGrip rearGripOnLooseGround = new LooseGrounGrip();
+    //[SerializeField] SolidGrounGrip rearGripOnSolidGround = new SolidGrounGrip();
+    //[SerializeField] LooseGrounGrip rearGripOnLooseGround = new LooseGrounGrip();
 
     [SerializeField] float FwSgLengthwiseGrip;
     [SerializeField] float RwSgLengthwiseGrip;
@@ -201,7 +202,11 @@ public class Car : MonoBehaviour
     float[] steeringAngles = new float[] { 0, 0, 0, 0 };
     Vector3[] visualWheelLocalPositions = new Vector3[4];
     Quaternion[] visualWheelLocalRotations = new Quaternion[4];
-    
+    //float[] solideGroundLenghthwiseGripMultipliers = new float[4];
+    //float[] solideGroundSidewaysGripMultipliers = new float[4];
+    //float[] looseGroundLenghthwiseGripMultipliers = new float[4];
+    //float[] looseGroundSidewaysGripMultipliers = new float[4];
+
     //Dependent Parameters
     Rigidbody rb;
     
@@ -220,6 +225,7 @@ public class Car : MonoBehaviour
     float currentAverageWheelSpinningSpeed = 0;
     float[] visualWheelCurrentXRot = new float[4];
     float[] visualWheelRPS = new float[4];
+    float[] longitudalRatioAndDirectionalScalingGripAtPreviouseFrame = new float[4]; //TO DO: SAVE FROM PREVIOUSE FRAME
     int currentGear = 0;
     int aimedGear = 0;
     int prevGear = 0;
@@ -233,12 +239,12 @@ public class Car : MonoBehaviour
 
 
     //input bools
-    bool inputThrottle = false;
-    bool inputBackwardThrottle = false;
-    bool inputBreake = false;
-    bool inputGearShiftDown = false;
-    bool inputGearShiftUp = false;
-    bool inputNitro = false;
+    //bool inputThrottle = false;
+    //bool inputBackwardThrottle = false;
+    //bool inputBreake = false;
+    //bool inputGearShiftDown = false;
+    //bool inputGearShiftUp = false;
+    //bool inputNitro = false;
 
 
     //delete after developement is done
@@ -249,6 +255,7 @@ public class Car : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("vector3 " + new Vector3());
         UpdateDependendParameters();
         UpdateArrayAccessibleParameters(false);
         ValidateGearSettings();
@@ -299,7 +306,13 @@ public class Car : MonoBehaviour
             wheel3DThicknesses[i] = i < 2 ? frontWheelInwardThickness + frontWheelOutwardThickness : rearWheelInwardThickness + rearWheelOutwardThickness;
         }
 
-        if (calledFromInspector && Application.isPlaying) return; //following should not be changed from the inspector during play-Mode
+
+        //make grip multiplier accessable by array
+        
+
+
+
+        if (calledFromInspector && Application.isPlaying) return; //after this comes, what should not be changed from the inspector during play-Mode
 
         for(int i = 0; i < 4; i++)
         {
@@ -307,24 +320,29 @@ public class Car : MonoBehaviour
             visualWheelLocalRotations[i] = Quaternion.Inverse(transform.rotation)*visualWheels[i].rotation;
             
         }
+
+
+
+
+
     }
 
     void Update() {
 
         //INPUT
-        float currentSpeed = Vector3.Dot(rb.velocity, transform.forward); //TO CHANGE: change this to Wheel Spin Speed later
+        //float currentSpeed = Vector3.Dot(rb.velocity, transform.forward); //TO CHANGE: change this to Wheel Spin Speed later
         currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
         if(gearShiftMode == GearShiftMode.Automatic || numberOfGears == 0)
         {
-            ThrottleKey.IsPressed = (currentSpeed >= -0.01f) && Input.GetKey(ThrottleKey.KeyboardInput);
-            BackwardThrottleKey.IsPressed = (currentSpeed <= 0.11f) && Input.GetKey(BackwardThrottleKey.KeyboardInput); //PUT TO 0.01 VALUE LATER !!!!!
-            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentSpeed > 0.01 && Input.GetKey(BackwardThrottleKey.KeyboardInput)) || (currentSpeed < -0.01 && Input.GetKey(ThrottleKey.KeyboardInput));
+            ThrottleKey.IsPressed = (currentAverageWheelSpinningSpeed >= -0.01f) && Input.GetKey(ThrottleKey.KeyboardInput);
+            BackwardThrottleKey.IsPressed = (currentAverageWheelSpinningSpeed <= 0.11f) && Input.GetKey(BackwardThrottleKey.KeyboardInput); //PUT TO 0.01 VALUE LATER !!!!!
+            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentAverageWheelSpinningSpeed > 0.01 && Input.GetKey(BackwardThrottleKey.KeyboardInput)) || (currentAverageWheelSpinningSpeed < -0.01 && Input.GetKey(ThrottleKey.KeyboardInput));
         }
         else
         {
-            ThrottleKey.IsPressed = Input.GetKey(ThrottleKey.KeyboardInput) && ((currentSpeed >= -0.01f && currentGear > -1) || (currentSpeed <= 0.01f && currentGear < 0)); //must have right gear for moving direction-
+            ThrottleKey.IsPressed = Input.GetKey(ThrottleKey.KeyboardInput) && ((currentAverageWheelSpinningSpeed >= -0.01f && currentGear > -1) || (currentAverageWheelSpinningSpeed <= 0.01f && currentGear < 0)); //must have right gear for moving direction-
             BackwardThrottleKey.IsPressed = false;
-            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentSpeed >= -0.01f && currentGear < 0) || (currentSpeed <= 0.01f && currentGear > -1); ; // -because the wrong gear also counts as breaking
+            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentAverageWheelSpinningSpeed >= -0.01f && currentGear < 0) || (currentAverageWheelSpinningSpeed <= 0.01f && currentGear > -1); ; // -because the wrong gear also counts as breaking
         }
 
         
@@ -334,13 +352,13 @@ public class Car : MonoBehaviour
         BreakKey.Update();
         HandbreakKey.Update();
         //gear shift input
-        ManageGearShiftInput(currentSpeed);
+        ManageGearShiftInput(currentAverageWheelSpinningSpeed);
 
 
         //TEST OF VISUAL WHEELS
         for (int i = 0; i < 4; i++)
         {
-            visualWheelRPS[i] = currentSpeed / ((i < 2 ? frontWheelRadius : rearWheelRadius) * 2 * Mathf.PI); //WIRD DURCH WHEEL SPEED ERSETZT
+            visualWheelRPS[i] = currentWheelSpinningSpeeds[i] / ((i < 2 ? frontWheelRadius : rearWheelRadius) * 2 * Mathf.PI); 
             visualWheelCurrentXRot[i] += visualWheelRPS[i] * 360 * Time.deltaTime;
             if (visualWheelCurrentXRot[i] > 360) visualWheelCurrentXRot[i] -= 360;
             if (visualWheelCurrentXRot[i] < 0) visualWheelCurrentXRot[i] += 360;
@@ -411,12 +429,6 @@ public class Car : MonoBehaviour
                     Vector3 directionalChange = effectOfFullImpulseStop.vFromDir * effectOfFullImpulseStop.treatedDirection * scalerToReachAimedSpeed;
                     rb.AddRelativeTorque(new Vector3(angularChange.x * inertiaTensorWS.x, angularChange.y * inertiaTensorWS.y, angularChange.z * inertiaTensorWS.z), ForceMode.Impulse);
                     rb.AddForce(directionalChange * rb.mass, ForceMode.Impulse);
-
-
-                    //GANZ ALT
-                    //ImpulseNeededToStopDirectionalMovementAtPoint(hitPoints[i], hitNormals[i], out angularChange, out directionalChange, out _);    //TESTWEISE AUSKOMMENTIERT!!!!!!
-                    //rb.angularVelocity += angularChange;
-                    //rb.velocity += directionalChange;
                 }
 
             }
@@ -427,26 +439,17 @@ public class Car : MonoBehaviour
 
         }
 
-        //TESTDRIVING
+        //STEERING
         float currentSpeed = Vector3.Dot(rb.velocity, transform.forward);
-        float currentRelSpeed = speedupCurve.GetTimeInCurve(currentSpeed);
-        //Gear shifting - input has already been managed in "Update()"
-        ComputeGearShiftState();
-        accelerationScalerByClutch = Mathf.Lerp(1, GetClutchValue(), shiftingImpactOnAcceleration);
-        float accelerationScalerBySuitabilityOfGear = GetAccelerationScaleByGear(currentGear, currentSpeed); //TO CHANGE: depend on wheel spin speed later
-        float totalGearAccelerationMultiplier = accelerationScalerByClutch * accelerationScalerBySuitabilityOfGear;
-        //set steering Angle
-        float frontSteerDifFor30ms = frontSteerAtZeroSpeed-frontSteerAt30MS;
-        float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed)/30)); //TO DO: DIESE FORMEL RICHTIG MACHEN, AUCH BEI DER ANZEIGE IM INSPECTOR TOOLTIP!
-        //float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (2 * Mathf.Pow(2, -30/ Mathf.Abs(currentSpeed))-1);
-        //richtige formel: rearSteerAt30MS + rearSteerDifFor30ms * (2 * Mathf.Pow(2, -30speed / abs(current)) - 1))
+        float frontSteerDifFor30ms = frontSteerAtZeroSpeed - frontSteerAt30MS;
+        float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
         UpdateSteerAngle(ref frontSteeringAngle, currentMaxFrontSteerAngle);
+        //set steering Angle (rear)
         float rearSteerDifFor30ms = rearSteerAtZeroSpeed - rearSteerAt30MS;
-        //float currentMaxRearSteerAngle = (rearSteerAt30MS + rearSteerDifFor30ms * (2 * -Mathf.Pow(2, -Mathf.Abs(currentSpeed) / 30) - 1)); //diese formel ist vermultich einfach falsch?
-        float currentMaxRearSteerAngle = rearSteerAt30MS + rearSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed)/ 30));
+        float currentMaxRearSteerAngle = rearSteerAt30MS + rearSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
         UpdateSteerAngle(ref rearSteeringAngle, currentMaxRearSteerAngle);
         //TO DO: NOW USE ACKERMAN TO SET INDIVIDUAL STEERING ANGLE OF WHEELS
-        
+
         steeringAngles[0] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
         steeringAngles[1] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
         steeringAngles[2] = rearSteeringAngle;
@@ -454,129 +457,551 @@ public class Car : MonoBehaviour
         //Debug.Log("front Steering Angle = " + frontSteeringAngle);
         //Debug.Log("rear Steering Angle = " + rearSteeringAngle);
 
+        //GEAR SHIFTING  
+        ComputeGearShiftState(); //(input has already been managed in "Update()". Therefor the registered input is computed here)
+
+        //TESTDRIVING
+        currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
+        //float currentRelSpeed = speedupCurve.GetTimeInCurve(currentSpeed);        
+        //accelerationScalerByClutch = Mathf.Lerp(1, GetClutchValue(), shiftingImpactOnAcceleration);
+        //float accelerationScalerBySuitabilityOfGear = GetAccelerationScaleByGear(currentGear, currentSpeed); //TO CHANGE: depend on wheel spin speed later
+        //float totalGearAccelerationMultiplier = accelerationScalerByClutch * accelerationScalerBySuitabilityOfGear;
+        //set steering Angle (front)
+        
+
         Vector3[] fowardOnGround = new Vector3[4];
-        float[] speedAtWheel = new float[4];
+        float[] fowardSpeedOverGroundAtWheel = new float[4];
+        Vector3[] sideSlideDirections = new Vector3[4];
+        float[] sideSlideSpeeds = new float[4];
         for (int i = 0; i < 4; i++)
         {
+            //forward
             Vector3 sideDirectionR = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.right);
-            fowardOnGround[i] = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
-            speedAtWheel[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), fowardOnGround[i]);
-            Debug.DrawRay(hitPointForLongitudal[i], fowardOnGround[i] * speedAtWheel[i]);
+            if (hitNormals[i] == Vector3.zero)// = if this wheel is not in contact with the ground, take local foward vector of wheel instead
+            {
+                fowardOnGround[i] = Vector3.Cross(sideDirectionR, transform.up).normalized;
+            }
+            else
+            {
+                fowardOnGround[i] = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
+            }
+            fowardSpeedOverGroundAtWheel[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), fowardOnGround[i]);
+            Debug.DrawRay(hitPointForLongitudal[i], fowardOnGround[i] * fowardSpeedOverGroundAtWheel[i]);
+
+            //sideward
+            Vector3 directionFoward = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward);
+            Vector3 rOnGround = Vector3.Cross(hitNormals[i], directionFoward);
+            sideSlideDirections[i] = (rOnGround * ((Vector3.Angle(GetActualPointVelocity(hitPointForLateral[i]), rOnGround) > 90) ? -1 : 1)).normalized;
+            sideSlideSpeeds[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLateral[i]), sideSlideDirections[i]); // CHECK IF THIS IS CORRECT!!!!
+            Debug.DrawRay(hitPointForLateral[i], -sideSlideDirections[i].normalized, Color.black);
+            //if (i == 0) Debug.DrawRay(hitPoints[i], -slideDirection.normalized * 0.1f, Color.blue, 0.3f);
+            //Debug.DrawRay(hitPoints[i], rb.GetPointVelocity(hitPoints[i]), Color.cyan);
         }
 
-        float averatgeWheelSpeed = (speedAtWheel[0] + speedAtWheel[1] + speedAtWheel[2] + speedAtWheel[3]) / 4f;
-        bool usingBackwardGear = currentGear < 0;
-        float gearDirection = usingBackwardGear ? -1 : 1;
-        bool wheelsSpinBackwards = averatgeWheelSpeed < 0;
-        float wheelSpinningDirectionalMultiplier = wheelsSpinBackwards ? -1 : 1;
-        float moveDirectionMultiplier = currentSpeed < 0 ? -1 : 1;
-                                                                                                                                        //VORISCHT: BISHER IST ALLES FOLGENDE NUR FÜR VORWÄRTS DREHENDE RÄTER IMPLEMENTIERT!!!!!!!!!!
-        float basicDecceleration = -testBasicSlowdown; //Replace with actual current basic slowdown
-        float breakingDecceleration = -testBreakingSlowdown; //Replace with actual current breaking slowdown
-        float maxThrottleAcceleration = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(averatgeWheelSpeed)) * totalGearAccelerationMultiplier; //Remove Mathf.abs and replace with other curve later!!
-        float combinedAcceleration;
 
-        bool canPassZeroByAcceleration; //TO DO: muss noch in logik eingebaut werden, nur beschleunigungne können aktiv richtungswechsel initiieren
+
+        (float atFullThrottle, float atNoThrottle) motorAcceleration = GetMotorAcceleration();
+        //Note: "motorAcceleration.atNoThrottle" is always 0 or negative, whereas ".atFullThrottle" it is usualy positive but could also turn out negative if a very unsuitable gear is used.
+        ActionMode actionMode;
+        int forceDirection; //default Foward
+        float frontWheelsPowerShare;
+        float totalAvailablePower;
+        float usedSlipPreventer;
+        bool wheelsSpinBackwards = currentAverageWheelSpinningSpeed < 0;
+        int wheelSpinningDirectionalMultiplier = wheelsSpinBackwards ? -1 : 1;
+        float[] normalForcesUsedForGrip = GetNormalForcesManipulatedForGrip(springCompressions, dampingForces);
+        float[] rollingFrictioSlowdownForEachWheel = GetRollingFrictionSlowdonwForEachWheel(normalForcesUsedForGrip);
+        float totalRollingFrictionSlowdown = rollingFrictioSlowdownForEachWheel[0] + rollingFrictioSlowdownForEachWheel[1] + rollingFrictioSlowdownForEachWheel[2] + rollingFrictioSlowdownForEachWheel[3];
 
         if (HandbreakKey.Value > 0)
         {
-            //not implemented yet
-            combinedAcceleration = -wheelSpinningDirectionalMultiplier;
-        }
-        else if(BreakKey.Value > 0)
-        {
-            float deccelerationWithoutBreake;
-            if (maxThrottleAcceleration + basicDecceleration < 0)
-            {
-                deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
-                if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
-            }
-            else
-            {
-                deccelerationWithoutBreake = basicDecceleration;
-            }
-            combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake,-testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;    
-        }
-        else if ( (gearShiftMode == GearShiftMode.Automatic || numberOfGears==0) ? (currentGear >=0 && ThrottleKey.Value > 0) : ThrottleKey.Value > 0) //TO DO: BACKWARD CASES
-        { 
+            actionMode = ActionMode.Handbreak;
+            forceDirection = -wheelSpinningDirectionalMultiplier; //breaking applies force into the opposite direction of the current wheel Spin.
             
-            if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
-            {
-                combinedAcceleration = Mathf.Lerp(basicDecceleration * moveDirectionMultiplier, maxThrottleAcceleration * gearDirection, ThrottleKey.Value);
-            }
-            else if (maxThrottleAcceleration> breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
-            {
-                float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, ThrottleKey.Value);
-                combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
-                if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
-                combinedAcceleration *= wheelSpinningDirectionalMultiplier;
+            //the breaking from the handbreak and the motor are combined here - as well as the proportional distribution to front or rear wheels.
+            //However the combined slow can not exceed the maximum slow from the handbreak. This way the player can not abuse shifting into a way to low gear to get unintended good breaking power.
+            float handbreakBreakPower = handBreakMaxSlowdown*HandbreakKey.Value;
+            float motorBreakPower = -motorAcceleration.atNoThrottle;
+            float ratioOfMotorBreak = motorBreakPower / (motorBreakPower + handbreakBreakPower);
+            frontWheelsPowerShare = handBreakAppliedToFrontWheels * (1-ratioOfMotorBreak) + motorBreakPower * ratioOfMotorBreak;
+            totalAvailablePower = handbreakBreakPower + motorBreakPower;
+            usedSlipPreventer = handBreakLessToOptimiseGrip;
+            if (totalAvailablePower > handBreakMaxSlowdown) totalAvailablePower = handBreakMaxSlowdown;
 
-            }
-            else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
-            {
-                combinedAcceleration = breakingDecceleration * wheelSpinningDirectionalMultiplier;
-            }
         }
-        else if (BackwardThrottleKey.Value > 0) //THIS HAS TO BE REPLACED WITH A CONCEPT FOR DRIVING BACKWARDS //TO DO: BACKWARD CASES
+        else if (BreakKey.Value > 0)//breaking works like handbreaking just with other values
         {
-            if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
-            {
-                combinedAcceleration = Mathf.Lerp(basicDecceleration, maxThrottleAcceleration, BackwardThrottleKey.Value);
-            }
-            else if (maxThrottleAcceleration > breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
-            {
-                float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, BackwardThrottleKey.Value);
-                combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
-                if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
-            }
-            else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
-            {
-                combinedAcceleration = breakingDecceleration;
-            }
-            combinedAcceleration *= -1;
+            actionMode = ActionMode.Break;
+            forceDirection = -wheelSpinningDirectionalMultiplier;
+            float breakBreakPower = breakMaxSlowdown * BreakKey.Value;
+            float motorBreakPower = -motorAcceleration.atNoThrottle;
+            float ratioOfMotorBreak = motorBreakPower / (motorBreakPower + breakBreakPower);
+            frontWheelsPowerShare = breakAppliedToFrontWheels * (1 - ratioOfMotorBreak) + motorBreakPower * ratioOfMotorBreak;
+            totalAvailablePower = breakBreakPower + motorBreakPower;
+            usedSlipPreventer = breakLessToOptimiseGrip;
+            if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
         }
-        else //only rolling- and air resistance
+        else if ((gearShiftMode == GearShiftMode.Automatic || numberOfGears == 0) ? (currentGear >= 0 && ThrottleKey.Value > 0) : ThrottleKey.Value > 0) //TO DO: BACKWARD CASES
         {
-            float deccelerationWithoutBreake;
-            if (maxThrottleAcceleration + basicDecceleration < 0)
+            float acceleration = motorAcceleration.atFullThrottle * ThrottleKey.Value + motorAcceleration.atNoThrottle * (1-ThrottleKey.Value);
+            frontWheelsPowerShare = rearOrFrontPowered;
+
+            if (acceleration > 0) 
             {
-                deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
-                if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
+                actionMode = ActionMode.AccelerateByMotor;
+                totalAvailablePower = acceleration;
+                forceDirection = currentGear<0?-1:1;
+                usedSlipPreventer = limitSpeedForGrip;
             }
             else
             {
-                deccelerationWithoutBreake = basicDecceleration;
+                actionMode = ActionMode.DeccelerateByMotor;
+                forceDirection = -wheelSpinningDirectionalMultiplier;
+                totalAvailablePower = -acceleration;
+                usedSlipPreventer = 0;
+                if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+                
             }
-            combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake, -testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;
+            
         }
-        for (int i = 0; i < 4; i++)
+        else if (BackwardThrottleKey.Value > 0) //THIS HAS TO BE REPLACED WITH A CONCEPT FOR DRIVING BACKWARDS //TO DO: BACKWARD CASES     //-maybe already done
         {
-            rb.AddForceAtPosition(fowardOnGround[i] * combinedAcceleration / 4f, hitPointForLongitudal[i]);
+            float acceleration = motorAcceleration.atFullThrottle * BackwardThrottleKey.Value + motorAcceleration.atNoThrottle * (1 - BackwardThrottleKey.Value);
+            frontWheelsPowerShare = rearOrFrontPowered;
+
+            if (acceleration > 0)
+            {
+                actionMode = ActionMode.AccelerateByMotor;
+                forceDirection = -1;
+                totalAvailablePower = acceleration;
+                usedSlipPreventer = limitSpeedForGrip;
+            }
+            else
+            {
+                actionMode = ActionMode.DeccelerateByMotor;
+                forceDirection = -wheelSpinningDirectionalMultiplier;
+                totalAvailablePower = -acceleration;
+                usedSlipPreventer = 0;
+                if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+            }
         }
+        else //rolling
+        {
+            frontWheelsPowerShare = rearOrFrontPowered;
+            actionMode = ActionMode.DeccelerateByMotor;
+            forceDirection = -wheelSpinningDirectionalMultiplier;
+            totalAvailablePower = -motorAcceleration.atNoThrottle;
+            usedSlipPreventer = 0;
+            if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+        }
+
+        //TO DO: FÜR VORDER UND HINTERRADPAAR ZUSÄTZLICH NO THROTTLE DRAUF PACKEN, FALLS MAXIMUM DADURCH NICHT ÜBERSCHRITTEN WIRD
+        //float aimedAccelerationDirection = currentGear < 0 ? -1 : 1;
+        float[] powerShareForWheelRotation = new float[4];
+        float[] powerShareForMovement = new float[4];
+        float[] availablePowerForFrame = new float[4];
+        //float[] totalDirectionalPower = new float[4];
+        bool[] canLeadToDirectionChange = new bool[] {false,false,false,false};
+
+
+        float fWPowerReservedForBothWheelSpins = frontWheelRotationHoldsRatioOfSpeed * 2; //first of all a part of the estimated power distribution does not depend on grip because it goes into canging the rotation of the wheels (without moving the car itself)
+        if(fWPowerReservedForBothWheelSpins > frontWheelsPowerShare) fWPowerReservedForBothWheelSpins = frontWheelsPowerShare; //not more than the entire front wheel power can be powered into pure wheel rotation
+        //float fWRemainingPowerShare = frontWheelsPowerShare - fWPowerReservedForBothWheelSpins;
+        //(same for rear wheels)
+        float rearWheelsPowerShare = 1 - rearOrFrontPowered;
+        float rWPowerReservedForBothWheelSpins = rearWheelRotationHoldsRatioOfSpeed * 2;
+        if (rWPowerReservedForBothWheelSpins > rearWheelsPowerShare) rWPowerReservedForBothWheelSpins = rearWheelsPowerShare;
+        //float rWRemainingPowerShare = rearWheelsPowerShare - rWPowerReservedForBothWheelSpins;
+        for (int i = 0; i < 4; i += 2)//has two iterations. The first one treats the left and right front wheel and the second one treats both rear wheels
+        {
+            //now split spin power between left and right wheel by the difference of their longitudal slip ratio to balance out unreasonably diffrent spinnging wheels (=by how their individual rotation matches the individual directional movement over the ground)
+            float leftRelSpinShare;
+            float rightRelSpinShare;
+
+            float leftWheelLongitudalSlipRatio = GetDirectionalSlipRatio(currentWheelSpinningSpeeds[0 + i] * forceDirection, fowardSpeedOverGroundAtWheel[0 + i] * forceDirection);
+            float rightWheelLongitudalSlipRatio = GetDirectionalSlipRatio(currentWheelSpinningSpeeds[1 + i] * forceDirection, fowardSpeedOverGroundAtWheel[1 + i] * forceDirection);
+
+            leftRelSpinShare = rightWheelLongitudalSlipRatio - leftWheelLongitudalSlipRatio + 0.5f;
+            if (leftRelSpinShare < 0) leftRelSpinShare = 0;
+            else if (leftRelSpinShare > 1) leftRelSpinShare = 1;
+            rightRelSpinShare = 1 - leftRelSpinShare;
+
+
+            powerShareForWheelRotation[0+i] = (i < 2 ? fWPowerReservedForBothWheelSpins : rWPowerReservedForBothWheelSpins) * leftRelSpinShare;
+            powerShareForWheelRotation[1+i] = (i < 2 ? fWPowerReservedForBothWheelSpins : rWPowerReservedForBothWheelSpins) * rightRelSpinShare;
+
+            //the remaining motorPower is splitten along the wheels scaled proportional to their estimated available longitudal grip force
+            float remainingMotorShare = (i < 2 ? frontWheelsPowerShare : rearWheelsPowerShare) - (i < 2 ? fWPowerReservedForBothWheelSpins : rWPowerReservedForBothWheelSpins);
+            float leftRelGrip  = normalForcesUsedForGrip[0 + i] * longitudalRatioAndDirectionalScalingGripAtPreviouseFrame[0 + i];
+            float rightRelGrip = normalForcesUsedForGrip[1 + i] * longitudalRatioAndDirectionalScalingGripAtPreviouseFrame[1 + i];
+            float leftRelShareForMovement = leftRelGrip / (leftRelGrip + rightRelGrip);
+            float rightRelShareForMovement = 1 - leftRelShareForMovement;
+            powerShareForMovement[0 + i] = remainingMotorShare * leftRelShareForMovement;
+            powerShareForMovement[1 + i] = remainingMotorShare * rightRelShareForMovement;
+
+            //combine motor-/break-power with slow from rolling friction. So far we used the power available for one second. To get the power available for this physicFrame we multiply the result with Time.fixedDeltaTime;
+            availablePowerForFrame[0 + i] = ((powerShareForWheelRotation[0 + i] + powerShareForMovement[0 + i]) * forceDirection * totalAvailablePower + rollingFrictioSlowdownForEachWheel[0 + i] * (-wheelSpinningDirectionalMultiplier))*Time.fixedDeltaTime;
+            availablePowerForFrame[1 + i] = ((powerShareForWheelRotation[1 + i] + powerShareForMovement[1 + i]) * forceDirection * totalAvailablePower + rollingFrictioSlowdownForEachWheel[1 + i] * (-wheelSpinningDirectionalMultiplier))*Time.fixedDeltaTime;
+            if(actionMode == ActionMode.AccelerateByMotor) //only accelerating could lead to a direction change. All types of breaking can not (variable is false by default)
+            {
+                //accelerating can lead to a direction change, but only when the rolling-friction-slowdown does not cancle it out, because that would make it a form of breaking in total
+                canLeadToDirectionChange[0 + i] = availablePowerForFrame[0 + i] * forceDirection < 0 ? false : true; 
+                canLeadToDirectionChange[1 + i] = availablePowerForFrame[1 + i] * forceDirection < 0 ? false : true;
+            }
+        }
+
+        //TO DO: ADD DECCELERATION FROM AIR RESISTANCE AND USE VELOCITY WITH ADDED VALUE FOR GRIP EVALUATION (maybe this should aleready be done before power distribution)
+
+
+        for(int i=0; i<4; i++) //for every wheel
+        {           
+            float availablePower = availablePowerForFrame[i]; //(note: can be negative)
+            float lengthwiseSpeedOverGround = fowardSpeedOverGroundAtWheel[i];
+            float spinningSpeed = currentWheelSpinningSpeeds[i];
+            //the gripOptimiser uses less of the force to get a better slip ratio leading to better grip. At acceleration this prevents the wheels from spinning to fast and at breaking it prevents the wheels to lock too hard
+            float gripOptimiser = actionMode == ActionMode.AccelerateByMotor ? limitSpeedForGrip : actionMode == ActionMode.Break ? breakLessToOptimiseGrip : actionMode == ActionMode.Handbreak ? handBreakLessToOptimiseGrip : 0;
+
+            //Szenario 0: Suprisingly no force has to be applied at all. Therefor only the current wheel spin needs to be computed.
+            if (availablePower == 0) {
+
+                goto beforeGripByOnlySpinOffset;
+            } 
+
+            bool fowardPower = availablePower > 0;
+            float powerRatioForRotation = i < 2 ? frontWheelRotationHoldsRatioOfSpeed : rearWheelRotationHoldsRatioOfSpeed;
+
+            //Scenario 1: The wheel is not even equal to the ground speed into the direction of force applied. In that case power is spend first to make the wheel spin match.
+            //If the power is not enought, compute wheel spin as opposing acceleration. Otherwise check for other Szenarios.
+            if (fowardPower)
+            {
+                if(lengthwiseSpeedOverGround > spinningSpeed)
+                {
+                    float neededPowerToMakeSpinMatch = powerRatioForRotation * (lengthwiseSpeedOverGround - spinningSpeed);
+                    if(neededPowerToMakeSpinMatch >= availablePower)
+                    {
+                        spinningSpeed = Mathf.Lerp(spinningSpeed, lengthwiseSpeedOverGround, availablePower / neededPowerToMakeSpinMatch);
+                        goto beforeGripByOnlySpinOffset;
+                    }
+                    else
+                    {
+                        spinningSpeed = lengthwiseSpeedOverGround;
+                        availablePower -= neededPowerToMakeSpinMatch;
+                    }
+
+                }
+            }
+            else //(note: the available power can be negative for backward power. Keep this in mind when looking at the operators of scopes like this, where fowardPower == false)
+            {
+                if (lengthwiseSpeedOverGround < spinningSpeed)
+                {
+                    float neededPowerToMakeSpinMatch = powerRatioForRotation * (lengthwiseSpeedOverGround - spinningSpeed);
+                    if (neededPowerToMakeSpinMatch <= availablePower)
+                    {
+                        spinningSpeed = Mathf.Lerp(spinningSpeed, lengthwiseSpeedOverGround, availablePower / neededPowerToMakeSpinMatch);
+                        goto beforeGripByOnlySpinOffset;
+                    }
+                    else
+                    {
+                        spinningSpeed = lengthwiseSpeedOverGround;
+                        availablePower -= neededPowerToMakeSpinMatch;
+                    }
+                }
+            }
+
+            //ansonsten gibt es:
+            // wheelspin, grip, power at:
+            //  (unbekannte Position in Reihenfolge). current wheel spin
+            //  2. same wheel spin as ground
+            //  3. best grip wheel spin
+            //  4. full power into spin 
+
+
+            //do it for current wheel spinn:
+            float wheelRotationHoldsRatioOfSpeed = i < 2 ? frontWheelRotationHoldsRatioOfSpeed : rearWheelRotationHoldsRatioOfSpeed;
+
+            (float lengthwise, float sideways) availableGripWithCurrentSpin = GetSpecificGripPower(spinningSpeed, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+
+            //find spinning speed for best slip ratio (the slip ratio, where the best grip is reached)
+            float totalCurrentSpeedOverGround = Mathf.Sqrt(lengthwiseSpeedOverGround * lengthwiseSpeedOverGround + sideSlideSpeeds[i] * sideSlideSpeeds[i]);
+            float bestSlipRatio = collidedGroundType[i] == 1 ? gripOnSolidGround.slipRatioOfMaxGrip : 2; //ToDo: case für keinen ground einfügen und gripOnLooseGround.slipRatioOfMaxGrip einfügen.
+            float bestSlip = bestSlipRatio * totalCurrentSpeedOverGround;
+            float bestLengthwiseSlip = Mathf.Sqrt(bestSlip * bestSlip - sideSlideSpeeds[i] * sideSlideSpeeds[i]);
+            float plannedSpinningSpeedForBestSlipRatio = lengthwiseSpeedOverGround + forceDirection * bestLengthwiseSlip;
+
+
+            float availablePowerForBestSlipRatio = availablePower + (spinningSpeed - plannedSpinningSpeedForBestSlipRatio) * wheelRotationHoldsRatioOfSpeed;
+            (float lengthwise, float sideways) availableGripPowerWithBestSlipRatioSpin = GetSpecificGripPower(plannedSpinningSpeedForBestSlipRatio, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+
+            float availablePowerForSameSpinAsGround = availablePower + (spinningSpeed - lengthwiseSpeedOverGround) * wheelRotationHoldsRatioOfSpeed;
+            (float lengthwise, float sideways) availableGripPowerWithSameSpinAsGround = GetSpecificGripPower(lengthwiseSpeedOverGround, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+
+
+
+            //The us
+            float plannedSpin = spinningSpeed;
+            float powerWithPlannedSpin = availablePower;
+            (float lengthwise, float sideways) availableGripWithPlannedSpin;
+
+
+            //To DO: double check, if it realy works for all cases, where force is backwards
+            if (availableGripWithCurrentSpin.lengthwise > availablePower * forceDirection) // when there is more Grip, than the  force to change the cars speed, 
+            {                                                                              // the offset from wheel spin to speed over ground becomes smaler till it matches in speed or force
+
+                //the difference of the wheel spin and available power between the current conditions and what would be, if the wheels spin as fast as the lenghwise speed over the ground
+                float spinDif = spinningSpeed - lengthwiseSpeedOverGround;
+                float powerDif = (spinningSpeed - lengthwiseSpeedOverGround) * wheelRotationHoldsRatioOfSpeed;
+
+                bool gripIsHigher = true;
+                //aproximate the wheel spin, where the available power == available grip. This is done by 20 iterations, leading to an accuracy of spinDif/1,048,576
+                for (int j = 1; j < 21; j++)
+                {
+                    if (gripIsHigher)
+                    {
+                        plannedSpin += spinDif / Mathf.Pow(2, j);
+                        powerWithPlannedSpin += powerDif / Mathf.Pow(2, j);
+                    }
+                    else
+                    {
+                        plannedSpin -= spinDif / Mathf.Pow(2, j);
+                        powerWithPlannedSpin -= powerDif / Mathf.Pow(2, j);
+                    }
+
+                    availableGripWithPlannedSpin = GetSpecificGripPower(plannedSpin, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+                    if (availableGripWithPlannedSpin.lengthwise > powerWithPlannedSpin * forceDirection)
+                    {
+                        gripIsHigher = true;
+                    }
+                    else if (availableGripWithPlannedSpin.lengthwise < powerWithPlannedSpin * forceDirection)
+                    {
+                        gripIsHigher = false;
+                    }
+                    else
+                    {
+                        break; //reached spin where grip matches power
+                    }
+                }
+            }
+            else if (availableGripWithCurrentSpin.lengthwise < availablePower * forceDirection) // when there is more force to change the cars speed, than grip to apply this force,
+            {                                                                                   // the offset rises till the forces match or all excess energy turns into wheel spin (unless specifically regulated)
+                //To Do: bei folgendem darauf achten, dass es auch für rückwärts force funktioniert
+                if (spinningSpeed * forceDirection < plannedSpinningSpeedForBestSlipRatio * forceDirection) //having a lower slip, than the perfect slip ratio
+                {
+                    if (availableGripPowerWithBestSlipRatioSpin.lengthwise > availablePowerForBestSlipRatio * forceDirection) //if the grip is yet not good enough at the current spin, but would be, if it spins at the perfect slip ratio, find the spinSpeed between thouse, where grip and power are equal.
+                    {
+                        //the difference of the wheel spin and available power between the current conditions and what would be, if the wheels spin as fast as needed for the perfect slip ratio
+                        float spinDif = plannedSpinningSpeedForBestSlipRatio - spinningSpeed;
+                        float powerDif = (spinningSpeed - plannedSpinningSpeedForBestSlipRatio) * wheelRotationHoldsRatioOfSpeed;
+
+                        bool gripIsHigher = false;
+                        //aproximate the wheel spin, where the available power == available grip. This is done by 20 iterations, leading to an accuracy of spinDif/1,048,576
+                        for (int j = 1; j < 21; j++)
+                        {
+                            if (gripIsHigher)
+                            {
+                                plannedSpin -= spinDif / Mathf.Pow(2, j);
+                                powerWithPlannedSpin -= powerDif / Mathf.Pow(2, j);
+                            }
+                            else
+                            {
+                                plannedSpin += spinDif / Mathf.Pow(2, j);
+                                powerWithPlannedSpin += powerDif / Mathf.Pow(2, j);
+                            }
+
+                            availableGripWithPlannedSpin = GetSpecificGripPower(plannedSpin, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+                            if (availableGripWithPlannedSpin.lengthwise > powerWithPlannedSpin * forceDirection)
+                            {
+                                gripIsHigher = true;
+                            }
+                            else if (availableGripWithPlannedSpin.lengthwise < powerWithPlannedSpin * forceDirection)
+                            {
+                                gripIsHigher = false;
+                            }
+                            else
+                            {
+                                break; //reached spin where grip matches power
+                            }
+                        }
+                    }
+                    else //if even the perfect slip ratio grip is not good enought, put energy, which can not be used for accelerating, into wheel spin
+                    {
+                        //since the perfect slip ratio grip at least happens during this frame (allthrough only for a moment), the power is converted into speed by that grip, while remaining power might change the wheel spin
+                        powerWithPlannedSpin = availableGripPowerWithBestSlipRatioSpin.lengthwise * forceDirection;
+                        availableGripWithPlannedSpin = availableGripPowerWithBestSlipRatioSpin;
+                        float remainingPower = availablePower - availableGripPowerWithBestSlipRatioSpin.lengthwise * forceDirection;
+                        float fullPoweredSpin = plannedSpinningSpeedForBestSlipRatio + remainingPower/ wheelRotationHoldsRatioOfSpeed;
+                        plannedSpin = Mathf.Lerp(fullPoweredSpin, spinningSpeed, usedSlipPreventer); 
+                    }
+                }
+                else //already having a higher slip, than the perfect slip ratio
+                {
+                    //first of all the current access slip above perfect slip ratio is reduced depending on the usedSlipPrevention - in a way, that the ratio of the usedSlipPrevention is applied over one second.
+                    //as an example: when the usedSlipPrevention is 0.5, around 29% of access slip is prevented in half a second, 50% in one second, 75% in two seconds and around 34% in four seconds
+                    float spinDifToPerfectSlipRatio = plannedSpinningSpeedForBestSlipRatio - spinningSpeed;
+                    float spinChangeForSlipReduction = spinDifToPerfectSlipRatio * (1-Mathf.Pow(1-usedSlipPreventer, Time.fixedDeltaTime)); //(0 without slip prevention and as big as the spinDifToPerfectSlipRatio at full slip prevention)
+                    plannedSpin = spinningSpeed + spinChangeForSlipReduction;
+                    //now put current access available power into wheel spin (reduced by usedSlipPrevention)
+                    float remainingPower = availablePower - availableGripWithCurrentSpin.lengthwise * forceDirection;
+                    float fullPoweredSpin = spinningSpeed + remainingPower / wheelRotationHoldsRatioOfSpeed;
+                    plannedSpin = Mathf.Lerp(fullPoweredSpin, plannedSpin, usedSlipPreventer);
+                    //use the new spin or the previous spin depending on what is lower
+                    availableGripWithPlannedSpin = GetSpecificGripPower(spinningSpeed * forceDirection < plannedSpin * forceDirection ? spinningSpeed : plannedSpin,
+                        lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+                }
+
+
+                //all forms of breaking or slowdown can slow the wheel spin down or even lock them, but not accelerate the spin into the opposite direction. The following lines prevent cases, where the previous code wrongfully created that behaviour
+                if(forceDirection * plannedSpin < 0 && !canLeadToDirectionChange[i])
+                {
+                    plannedSpin = 0;
+                    availableGripWithPlannedSpin = GetSpecificGripPower(plannedSpin, lengthwiseSpeedOverGround, sideSlideSpeeds[i], forceDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
+                }
+            }
+
+            goto afterGripByOnlySpinOffset;
+            beforeGripByOnlySpinOffset:
+            //This part of the code is only called when the car does not apply any more force to the wheels and therefore the offset spin to the ground has not been computet yet.
+            //In this case access spin gets (partly) balanced out (depending on grip) to better match the wheels speed over the ground. The force of the changed wheel spin changes the cars speed into the opposing direction.
+            //example: if wheels spin faster, than how fast they move over the ground, they accelerate the car and their own spin is slowed down in return. If they spin too slow, their rotation is accelerated on cost of the car's speed.
+
+            afterGripByOnlySpinOffset:
+
+            //float fowardSlip = Mathf.Abs(spinningSpeed - speedOverGround);
+            //float sideSlip = Mathf.Abs(sideSlideSpeeds[i]); //next: anhand von slip verhältnis ausrechnen, wie viel des grip für forward verfügbar ist
+            //float slipAngle = Mathf.Atan(sideSlip / fowardSlip);
+            //float fowardScaler = Mathf.Cos(slipAngle);
+            //float sidewardScaler = Mathf.Sin(slipAngle);
+            //(float slipRatio, bool usesFowardForce) ratAndDir =  GetSlipRatio(speedOverGround, sideSlip, spinningSpeed, forceDirection);
+            //float slipRatio = ratAndDir.slipRatio;
+            //bool usesFowardForce = ratAndDir.usesFowardForce;
+            //float rawGrip = GetRawGripBySlipRatio(slipRatio, collidedGroundType[i]);
+            //float availableFowardGripPower = rawGrip * fowardScaler * normalForcesUsedForGrip[i] * GetUsedGripMultiplier(collidedGroundType[i], i<2, true) * Time.fixedDeltaTime;
+
+
+            (float wheelSpin, float grip, float power) spinningCurrently;
+            (float wheelSpin, float grip, float power) spinningAtGroundSpeed;
+            (float wheelSpin, float grip, float power) spinningForBestGrip;
+            (float wheelSpin, float grip, float power) spinningFullPowered;
+
+
+
+
+
+
+            currentWheelSpinningSpeeds[i] = spinningSpeed; //das müsste vor den "continue;"s  passieren
+        }
+
+
+
+        //float rearWheelMotorShare = 1 - rearOrFrontPowered;
+
+
+
+        //float averatgeWheelSpeed = (speedAtWheel[0] + speedAtWheel[1] + speedAtWheel[2] + speedAtWheel[3]) / 4f;
+        //bool usingBackwardGear = currentGear < 0;
+        //float gearDirection = usingBackwardGear ? -1 : 1;
+        
+        //float moveDirectionMultiplier = currentSpeed < 0 ? -1 : 1;
+        ////VORISCHT: BISHER IST ALLES FOLGENDE NUR FÜR VORWÄRTS DREHENDE RÄTER IMPLEMENTIERT - oder doch schon?
+        //float combinedAcceleration;
+        //float basicDecceleration = -testBasicSlowdown; //Replace with actual current basic slowdown
+        //float breakingDecceleration = -testBreakingSlowdown; //Replace with actual current breaking slowdown
+        //float maxThrottleAcceleration = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(currentAverageWheelSpinningSpeed)) * totalGearAccelerationMultiplier; //Remove Mathf.abs and replace with other curve later!!
+        
+
+        //bool canPassZeroByAcceleration; //TO DO: muss noch in logik eingebaut werden, nur beschleunigungne können aktiv richtungswechsel initiieren
+
+        //if (HandbreakKey.Value > 0)
+        //{
+        //    //not implemented yet
+        //    combinedAcceleration = -wheelSpinningDirectionalMultiplier;
+        //}
+        //else if(BreakKey.Value > 0)
+        //{
+        //    float deccelerationWithoutBreake;
+        //    if (maxThrottleAcceleration + basicDecceleration < 0)
+        //    {
+        //        deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
+        //        if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
+        //    }
+        //    else
+        //    {
+        //        deccelerationWithoutBreake = basicDecceleration;
+        //    }
+        //    combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake,-testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;    
+        //}
+        //else if ( (gearShiftMode == GearShiftMode.Automatic || numberOfGears==0) ? (currentGear >=0 && ThrottleKey.Value > 0) : ThrottleKey.Value > 0) //TO DO: BACKWARD CASES
+        //{ 
+            
+        //    if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
+        //    {
+        //        combinedAcceleration = Mathf.Lerp(basicDecceleration * moveDirectionMultiplier, maxThrottleAcceleration * gearDirection, ThrottleKey.Value);
+        //    }
+        //    else if (maxThrottleAcceleration> breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
+        //    {
+        //        float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, ThrottleKey.Value);
+        //        combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
+        //        if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
+        //        combinedAcceleration *= wheelSpinningDirectionalMultiplier;
+
+        //    }
+        //    else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
+        //    {
+        //        combinedAcceleration = breakingDecceleration * wheelSpinningDirectionalMultiplier;
+        //    }
+        //}
+        //else if (BackwardThrottleKey.Value > 0) //THIS HAS TO BE REPLACED WITH A CONCEPT FOR DRIVING BACKWARDS //TO DO: BACKWARD CASES
+        //{
+        //    if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
+        //    {
+        //        combinedAcceleration = Mathf.Lerp(basicDecceleration, maxThrottleAcceleration, BackwardThrottleKey.Value);
+        //    }
+        //    else if (maxThrottleAcceleration > breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
+        //    {
+        //        float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, BackwardThrottleKey.Value);
+        //        combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
+        //        if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
+        //    }
+        //    else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
+        //    {
+        //        combinedAcceleration = breakingDecceleration;
+        //    }
+        //    combinedAcceleration *= -1;
+        //}
+        //else //only rolling- and air resistance
+        //{
+        //    float deccelerationWithoutBreake;
+        //    if (maxThrottleAcceleration + basicDecceleration < 0)
+        //    {
+        //        deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
+        //        if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
+        //    }
+        //    else
+        //    {
+        //        deccelerationWithoutBreake = basicDecceleration;
+        //    }
+        //    combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake, -testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;
+        //}
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    rb.AddForceAtPosition(fowardOnGround[i] * combinedAcceleration / 4f, hitPointForLongitudal[i]);
+        //}
+
+
 
 
         //SIDEWARD FRICTION
-        float[] normalForcesUsedForGrip = GetNormalForcesManipulatedForGrip(springCompressions, dampingForces);
-        Vector3[] slideDirections = new Vector3[4];
-        float[] slideSpeeds = new float[4];
+        
         (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[] impulseProperties = new (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[4];
         for (int i = 0; i < 4; i++)
         {
             //SIDEWARD FRICTION
             
-            Vector3 directionFoward = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward);
-            Vector3 rOnGround = Vector3.Cross(hitNormals[i], directionFoward);
-            //Debug.DrawRay(hitPoints[i], rOnGround.normalized);
-            slideDirections[i] = (rOnGround * ((Vector3.Angle(GetActualPointVelocity(hitPointForLateral[i]), rOnGround) > 90) ? -1 : 1)).normalized;
-            slideSpeeds[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLateral[i]), slideDirections[i]); // CHECK IF THIS IS CORRECT!!!!
-            Debug.DrawRay(hitPointForLateral[i], -slideDirections[i].normalized, Color.black);
-            //if (i == 0) Debug.DrawRay(hitPoints[i], -slideDirection.normalized * 0.1f, Color.blue, 0.3f);
-            //Debug.DrawRay(hitPoints[i], rb.GetPointVelocity(hitPoints[i]), Color.cyan);
+            
 
             float maxStopImpulse;
-            if ((i < 2 && endlessLengthwiseGrip) || (i >= 2 && endlessSidewaysGrip))
+            if (endlessSidewaysGrip)
             {
-                maxStopImpulse = slideSpeeds[i]* rb.mass / 4; 
+                maxStopImpulse = sideSlideSpeeds[i]* rb.mass / 4; 
 
             }
             else
@@ -585,7 +1010,7 @@ public class Car : MonoBehaviour
 
             }
            
-            impulseProperties[i] = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(hitPointForLateral[i], -slideDirections[i], maxStopImpulse); 
+            impulseProperties[i] = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(hitPointForLateral[i], -sideSlideDirections[i], maxStopImpulse); 
         }
         float[,] maxsConversionsToMyV = new float[4,4]; //How much would the maximum impulse of another Wheel impact my own directional velocity [toMyV,fromOtherRatio]
         for(int i = 0; i < 4; i++)
@@ -628,7 +1053,7 @@ public class Car : MonoBehaviour
                     continue;
                 }
                 float vFromOtherWheels = maxsConversionsToMyV[i,0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
-                float neededOwnV = slideSpeeds[i] - vFromOtherWheels;
+                float neededOwnV = sideSlideSpeeds[i] - vFromOtherWheels;
                 plannedRatios[i] = neededOwnV / impulseProperties[i].maxV; //* 0.9f; //DELETE *0.9f LATER!!!!
                 if (plannedRatios[i] > 1) plannedRatios[i] = 1;
                 if (plannedRatios[i] < -1) plannedRatios[i] = -1;
@@ -674,6 +1099,18 @@ public class Car : MonoBehaviour
 
         //Debug.Log("estimatedVelNextFrame = " + GetActualPointVelocity(Vector3.one));
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -732,11 +1169,6 @@ public class Car : MonoBehaviour
                 {
                     float xRot = -90 + (j + 0.5f) * degreeCoveredPerBoxCast;
                     Vector3 boxCenter = startPoint + rb.rotation * (Quaternion.Euler(xRot, 0, 0) * Vector3.down * wheelRadii[i] * 0.5f); //+ localXOffsetVec); // WAS 0.01f before!!!!!
-                    //Debug.DrawRay(boxCenter, new Vector3(wheel3DThicknesses[i], wheelRadii[i], zScale), UnityEngine.Color.red, 0.02f);
-                    //Gizmos.DrawCube(boxCenter, startToEnd);
-                    //ExtDebug.DrawBoxCastBox(boxCenter, new Vector3(wheel3DThicknesses[i], wheelRadii[i], zScale),  rb.rotation * Quaternion.Euler(xRot, 0, 0), startToEnd, startToEnd.magnitude, Color.red);
-                    //ExtDebug.DrawBox(boxCenter + rb.rotation * (Vector3.down * wheelRadii[i] + upwardSuspensionCapVec[i]) , new Vector3(wheel3DThicknesses[i], wheelRadii[i], zScale)*0.5f, rb.rotation * Quaternion.Euler(xRot, 0, -1*side), Color.red);
-                    //ExtDebug.DrawBox(rb.position, Vector3.one, rb.rotation, Color.blue);
                     RaycastHit hit;
 
                     if (Physics.BoxCast(boxCenter, new Vector3(wheel3DThicknesses[i], wheelRadii[i], zScale)*0.5f, startToEnd, out hit, rb.rotation * Quaternion.Euler(xRot, 0, -1 * side), startToEnd.magnitude, combinedGroundLayers))
@@ -1309,6 +1741,110 @@ public class Car : MonoBehaviour
         return average;
     }
 
+    float GetAirResistanceSlowdownForSpeed(float speed)
+    {
+        return slowByAirResistanceAt30ms  * Mathf.Pow(speed/30, airResistanceExponent);
+    }
+
+    float[] GetRollingFrictionSlowdonwForEachWheel(float[] normalForcesUsedForGrip)
+    {
+        float[] rollingFriction = new float[4];
+        for(int i = 0; i < 4; i++)
+        {
+            rollingFriction[i] = normalForcesUsedForGrip[i] * slowByRollFriction;
+        }
+        return rollingFriction;
+    }
+
+    (float atFullThrottle, float atNoThrottle) GetMotorAcceleration()
+    {
+        float atFullThrottle;
+        float atNoThrottle;
+        float spinDirectionMultiplier = currentAverageWheelSpinningSpeed < 0 ? -1 : 1;
+        accelerationScalerByClutch = Mathf.Lerp(1, GetClutchValue(), shiftingImpactOnAcceleration);
+
+        if (Mathf.Abs(currentAverageWheelSpinningSpeed) < speedupCurve.topSpeed) //below max Speed
+        {
+            float relSpinSpeed = speedupCurve.GetTimeInCurve(currentAverageWheelSpinningSpeed);
+            float baseAccelerationAtCurrentSpeed = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(currentAverageWheelSpinningSpeed));
+            float accelerationScalerBySuitabilityOfGear = GetAccelerationScaleByGear(currentGear, currentAverageWheelSpinningSpeed);
+            float gearsOptimumRelSpeed = currentGear < 0 ? gearIsBestAtRelSpeed[0] : gearIsBestAtRelSpeed[currentGear];
+            bool spinFasterThanOptimum = (relSpinSpeed > gearsOptimumRelSpeed);
+
+            float airResistanceToOvercome = GetAirResistanceSlowdownForSpeed(currentAverageWheelSpinningSpeed);
+
+            atFullThrottle = (baseAccelerationAtCurrentSpeed * accelerationScalerBySuitabilityOfGear + airResistanceToOvercome + slowByRollFriction)* spinDirectionMultiplier; //(To DO: adjust slowByRollingFriction for current wheel spin)
+
+            if (spinFasterThanOptimum) //The motor can only create a slowdown when the gear is too low for the current speed
+            {
+                atNoThrottle = ((baseAccelerationAtCurrentSpeed * accelerationScalerBySuitabilityOfGear) - baseAccelerationAtCurrentSpeed)* spinDirectionMultiplier;
+            }
+            else
+            {
+                atNoThrottle = 0;
+                if (atFullThrottle < 0) atFullThrottle = 0;
+            }
+
+            
+        }
+        else //above max Speed
+        {
+            float theoreticalAccelerationAtMaxSpeed = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(speedupCurve.topSpeed));
+            float accelerationScalerBySuitabilityOfGear = GetAccelerationScaleByGear(currentGear, currentAverageWheelSpinningSpeed);
+            //float freeBadGearRatio = 1 - gearScaleAtMinimum;
+            float punishmentForBadGearRatio = (accelerationScalerBySuitabilityOfGear - gearScaleAtMinimum) * theoreticalAccelerationAtMaxSpeed; //is 0 or negative because the accelerationScalerBSOG is <= gearScaleAtMinimum
+            float airResistanceToOvercomeAtMaxSpeed = GetAirResistanceSlowdownForSpeed(speedupCurve.topSpeed);
+
+            atFullThrottle = (airResistanceToOvercomeAtMaxSpeed + slowByRollFriction + punishmentForBadGearRatio)*spinDirectionMultiplier; //(TO DO: adjust slowByRollingFriction to topSpeed)
+            atNoThrottle = punishmentForBadGearRatio*spinDirectionMultiplier;
+        }
+
+
+        return (atFullThrottle*accelerationScalerByClutch, atNoThrottle*accelerationScalerByClutch);
+    }
+
+    (float slilpRatio, bool usesFowardForce) GetSlipRatio(float fowardSpeedOverGround, float sidewaysSlip, float wheelSpin, int intendedDirection)
+    {
+        bool usesFowardForce = fowardSpeedOverGround < wheelSpin || (fowardSpeedOverGround==wheelSpin && intendedDirection>0);
+        bool useSlipRatioForBreaking = Mathf.Abs(fowardSpeedOverGround) > Mathf.Abs(wheelSpin) || (Mathf.Abs(fowardSpeedOverGround) == Mathf.Abs(wheelSpin) && (wheelSpin*intendedDirection<0));
+        bool oppositeDirection = fowardSpeedOverGround * wheelSpin < 0;
+        float slipMagnitude = Mathf.Sqrt(fowardSpeedOverGround*fowardSpeedOverGround+sidewaysSlip*sidewaysSlip);
+
+        float slipRatio;
+
+        if (oppositeDirection)
+        {
+            slipRatio = 2;
+        }
+        else if (useSlipRatioForBreaking)
+        {
+            slipRatio = 1 - (slipMagnitude / Mathf.Abs(wheelSpin));
+        }
+        else
+        {
+            if (Mathf.Abs(wheelSpin) < slipMagnitude)
+            {
+                slipRatio = 0;
+            }
+            else
+            {
+                slipRatio = (Mathf.Abs(wheelSpin) - slipMagnitude) / slipMagnitude;
+            }
+        }
+        if (slipRatio > 2) slipRatio = 2;
+        if (slipRatio < 0) slipRatio = 0;
+
+        return (slipRatio, usesFowardForce);
+    }
+
+
+
+    float GetRawGripBySlipRatio (float slipRatio, int groundType)
+    {
+        if (groundType < 0 || groundType > 2) Debug.LogError("groundType" + groundType + " is not valide!");
+        return groundType == 0 ? 0: groundType == 1? gripOnSolidGround.curve.Evaluate(slipRatio) : gripOnLooseGround.curve.Evaluate(slipRatio);
+    }
+
     //Just visual inspector feedback
     void OnDrawGizmos()
     {
@@ -1335,6 +1871,130 @@ public class Car : MonoBehaviour
         }
     }
 
+    float GetDirectionalSlipRatio(float spinSpeed, float groundSpeed)
+    {
+        float slipRatio;
+        if (spinSpeed >= 0)
+        {
+            if (groundSpeed >= 0)
+            {
+                slipRatio = spinSpeed/groundSpeed;
+                if(slipRatio > 2) slipRatio= 2;
+            }
+            else
+            {
+                slipRatio = 2;
+            }
+        }
+        else
+        {
+            if (groundSpeed >= 0)
+            {
+                slipRatio=0;
+            }
+            else
+            {
+
+                slipRatio =  (groundSpeed-spinSpeed)/ groundSpeed;
+                if (slipRatio > 2) slipRatio = 2;
+                if (slipRatio < 0) slipRatio = 0;
+            }
+        }
+        return slipRatio;
+    }
+
+    float GetUsedGripMultiplier(int groundType, bool frontWheel, bool lengthwise) //returns 0 when no ground collision happened
+    {
+        float gripMultiplier;
+
+        if(groundType == 0)
+        {
+            return 0;//no ground collision
+        }
+        else if(groundType == 1 || useSameGripMultipliersAsSolidGround)
+        {
+            if(frontWheel || sameGripSettingsForRearWheel)
+            {
+                if (lengthwise)
+                {
+                    return FwSgLengthwiseGrip;
+                }
+                else
+                {
+                    return FwSgSidewaysGrip;
+                }
+                
+            }
+            else
+            {
+                if (lengthwise)
+                {
+                    return RwSgLengthwiseGrip;
+                }
+                else
+                {
+                    return RwSgSidewaysGrip;
+                }
+            }
+        }
+        else if(groundType == 2)
+        {
+            if (frontWheel || sameGripSettingsForRearWheel)
+            {
+                if (lengthwise)
+                {
+                    return FwLgLengthwiseGrip;
+                }
+                else
+                {
+                    return FwLgSidewaysGrip;
+                }
+
+            }
+            else
+            {
+                if (lengthwise)
+                {
+                    return RwLgLengthwiseGrip;
+                }
+                else
+                {
+                    return RwLgSidewaysGrip;
+                }
+            }
+        }
+        else
+        {
+            Debug.LogError(groundType + " is no valide GroundType");
+            return -1;
+        }
+
+    }
+
+    (float lenghthwise, float sideways) GetSpecificGripPower(float spinningSpeed, float speedOverGround, float sideSlideSpeed, int forceDirection, int collidedGroundType, float normalForcesUsedForGrip, bool isFrontWheel)
+    {
+        float fowardSlip = Mathf.Abs(spinningSpeed - speedOverGround);
+        float sideSlip = Mathf.Abs(sideSlideSpeed);
+
+        float slipAngle = Mathf.Atan(sideSlip / fowardSlip);
+
+        float fowardScaler = Mathf.Cos(slipAngle);
+        float sidewardScaler = Mathf.Sin(slipAngle);
+
+        if (fowardScaler < 0.05f) fowardScaler = 0.05f;
+        if (sidewardScaler < 0.05f) sidewardScaler = 0.05f;
+
+
+        //(float slipRatio, bool usesFowardForce) slipRatio = GetSlipRatio(speedOverGround, sideSlip, spinningSpeed, forceDirection);
+        //float slipRatio = ratAndDir.slipRatio;
+        //bool usesFowardForce = ratAndDir.usesFowardForce;
+        float slipRatio = GetSlipRatio(speedOverGround, sideSlip, spinningSpeed, forceDirection).slilpRatio;
+        float rawGrip = GetRawGripBySlipRatio(slipRatio, collidedGroundType);
+        float availableLengthwiseGripPower = rawGrip * fowardScaler * normalForcesUsedForGrip * GetUsedGripMultiplier(collidedGroundType, isFrontWheel, true) * Time.fixedDeltaTime;
+        float availableSidewaysGripPower = rawGrip * sidewardScaler * normalForcesUsedForGrip * GetUsedGripMultiplier(collidedGroundType, isFrontWheel, false) * Time.fixedDeltaTime;
+
+        return (availableLengthwiseGripPower, availableSidewaysGripPower);
+    }
 
 }
 
@@ -1355,7 +2015,20 @@ public enum GearShiftState
     GearingIn
 }
 
+enum ShouldGet
+{
+    All,
+    Nothing,
+    Value
+}
 
+enum ActionMode
+{
+    AccelerateByMotor,
+    DeccelerateByMotor,
+    Break,
+    Handbreak
+}
 
 
 
