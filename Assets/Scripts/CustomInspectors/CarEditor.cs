@@ -1,12 +1,13 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System;
-using UnityEngine.UIElements;
+//using UnityEngine.UIElements;
 using Unity.VisualScripting;
-using UnityEditorInternal;
-using System.Reflection;
-using System.Runtime.ConstrainedExecution;
-using UnityEditor.UIElements;
+//using UnityEditorInternal;
+//using System.Reflection;
+//using System.Runtime.ConstrainedExecution;
+//using UnityEditor.UIElements;
 //using System.Drawing;
 
 
@@ -23,7 +24,7 @@ public class CarEditor : Editor
 
     //Information for Background Rectangles
     readonly float lineH = EditorGUIUtility.singleLineHeight;
-    float[] sectionHeights = new float[10];
+    float[] sectionHeights = new float[20];
     (float from, float to)[] subrectangles = new (float, float)[5];
     float gearRecTo = 0;
     
@@ -39,6 +40,7 @@ public class CarEditor : Editor
     //acceleration
     SerializedProperty speedupCurve;
     SerializedProperty rearOrFrontPowered;
+    SerializedProperty accelerationRestrainToOptimiseGrip;
 
     //gears
     SerializedProperty gearImpactOnAcceleration;
@@ -57,12 +59,12 @@ public class CarEditor : Editor
     //breaking Settings
     SerializedProperty breakMaxSlowdown;
     SerializedProperty breakAppliedToFrontWheels;
-    SerializedProperty breakAppliedToRearWheels;
-    SerializedProperty breakLessToOptimiseGrip;
+    //SerializedProperty breakAppliedToRearWheels;
+    SerializedProperty breakRestrainToOptimiseGrip;
     SerializedProperty handBreakMaxSlowdown;
     SerializedProperty handBreakAppliedToFrontWheels;
-    SerializedProperty handBreakAppliedToRearWheels;
-    SerializedProperty handBreakLessToOptimiseGrip;
+    //SerializedProperty handBreakAppliedToRearWheels;
+    SerializedProperty handBreakRestrainToOptimiseGrip;
 
     //physical wheel-position and spring settings
     SerializedProperty showFrontWheelSettings;
@@ -115,6 +117,8 @@ public class CarEditor : Editor
     //SerializedProperty rearGripOnLooseGround;
 
     //grip             (Fw = Front Wheel, Rw = Rear Wheel, Sg = Solide Ground, Lg = Loose Ground)
+    SerializedProperty lengthwiseGripAffectedBySidewaysSlip;
+    SerializedProperty sidewaysGripAffectedByLengthwiseSlip;
     SerializedProperty useSameGripMultipliersAsSolidGround;
     SerializedProperty FwSgLengthwiseGrip;
     SerializedProperty RwSgLengthwiseGrip;
@@ -132,7 +136,11 @@ public class CarEditor : Editor
     SerializedProperty frontSteerAt30MS;
     SerializedProperty rearSteerAtZeroSpeed;
     SerializedProperty rearSteerAt30MS;
-    
+    //steering balancing
+    SerializedProperty frontSteerTowardsSlide;
+    SerializedProperty maxFrontAngleTowardsSlide;
+    SerializedProperty rearSteerTowardsSlide;
+    SerializedProperty maxRearAngleTowardsSlide;
 
     //input
     SerializedProperty breakAtOtherDirectionInput; 
@@ -176,7 +184,9 @@ public class CarEditor : Editor
     //Which Settings are folded out:
     bool showAccelerationSettings = false;
     bool showGearSettings = false;
-    bool showDeccelerationSettings = false;
+    bool showBreakSettings = false;
+    bool showHandBreakSettings = false;
+    bool showDecelerationSettings = false;
 
 
 
@@ -202,6 +212,7 @@ public class CarEditor : Editor
         //accelleration settings
         speedupCurve = serializedObject.FindProperty("speedupCurve");
         rearOrFrontPowered = serializedObject.FindProperty("rearOrFrontPowered");
+        accelerationRestrainToOptimiseGrip = serializedObject.FindProperty("accelerationRestrainToOptimiseGrip");
         //gear settings
         gearImpactOnAcceleration = serializedObject.FindProperty("gearImpactOnAcceleration");
         numberOfGears = serializedObject.FindProperty("numberOfGears");
@@ -217,12 +228,10 @@ public class CarEditor : Editor
         //breaking settings
         breakMaxSlowdown = serializedObject.FindProperty("breakMaxSlowdown");
         breakAppliedToFrontWheels = serializedObject.FindProperty("breakAppliedToFrontWheels");
-        breakAppliedToRearWheels = serializedObject.FindProperty("breakAppliedToRearWheels");
-        breakLessToOptimiseGrip = serializedObject.FindProperty("breakLessToOptimiseGrip");
+        breakRestrainToOptimiseGrip = serializedObject.FindProperty("breakRestrainToOptimiseGrip");
         handBreakMaxSlowdown = serializedObject.FindProperty("handBreakMaxSlowdown");
         handBreakAppliedToFrontWheels = serializedObject.FindProperty("handBreakAppliedToFrontWheels");
-        handBreakAppliedToRearWheels = serializedObject.FindProperty("handBreakAppliedToRearWheels");
-        handBreakLessToOptimiseGrip = serializedObject.FindProperty("handBreakLessToOptimiseGrip");
+        handBreakRestrainToOptimiseGrip = serializedObject.FindProperty("handBreakRestrainToOptimiseGrip");
         //front wheel physical position and spring settings
         showFrontWheelSettings = serializedObject.FindProperty("showFrontWheelSettings");
         frontRightWheelCenter = serializedObject.FindProperty("frontRightWheelCenter");
@@ -266,12 +275,10 @@ public class CarEditor : Editor
         sameGripSettingsForAllWheels = serializedObject.FindProperty("sameGripSettingsForRearWheel");
         endlessLengthwiseGrip = serializedObject.FindProperty("endlessLengthwiseGrip");
         endlessSidewaysGrip = serializedObject.FindProperty("endlessSidewaysGrip");
+        //grip settings direction dependence scaler
+        lengthwiseGripAffectedBySidewaysSlip = serializedObject.FindProperty("lengthwiseGripAffectedBySidewaysSlip");
+        sidewaysGripAffectedByLengthwiseSlip = serializedObject.FindProperty("sidewaysGripAffectedByLengthwiseSlip");
         //grip settings fine
-        //frontGripOnSolidGround = serializedObject.FindProperty("frontGripOnSolidGround");
-        //frontGripOnLooseGround = serializedObject.FindProperty("frontGripOnLooseGround");
-        //rearGripOnSolidGround = serializedObject.FindProperty("rearGripOnSolidGround");
-        //rearGripOnLooseGround = serializedObject.FindProperty("rearGripOnLooseGround");
-
         FwSgLengthwiseGrip  = serializedObject.FindProperty("FwSgLengthwiseGrip");
         RwSgLengthwiseGrip = serializedObject.FindProperty("RwSgLengthwiseGrip");
         FwSgSidewaysGrip = serializedObject.FindProperty("FwSgSidewaysGrip");
@@ -289,7 +296,11 @@ public class CarEditor : Editor
         frontSteerAt30MS = serializedObject.FindProperty("frontSteerAt30MS");
         rearSteerAtZeroSpeed = serializedObject.FindProperty("rearSteerAtZeroSpeed");
         rearSteerAt30MS = serializedObject.FindProperty("rearSteerAt30MS");
-        
+        //steering balancing
+        frontSteerTowardsSlide = serializedObject.FindProperty("frontSteerTowardsSlide");
+        maxFrontAngleTowardsSlide = serializedObject.FindProperty("maxFrontAngleTowardsSlide");
+        rearSteerTowardsSlide = serializedObject.FindProperty("rearSteerTowardsSlide");
+        maxRearAngleTowardsSlide = serializedObject.FindProperty("maxRearAngleTowardsSlide");
 
         //input secttion
         breakAtOtherDirectionInput = serializedObject.FindProperty("breakAtOtherDirectionInput");
@@ -402,22 +413,24 @@ public class CarEditor : Editor
             EditorGUILayout.CurveField("Speed Curve", car.SpeedupCurve.curve, colorForRealism, new Rect(0, 0f, 1f, 1f));
             currentH += lineH*3 + 8;
             //rearOrFrontPowered.floatValue = 
-            EditorGUILayout.BeginHorizontal();
-            {
+            //EditorGUILayout.BeginHorizontal();
+            //{
 
-                //GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("(%) Rear", GUILayout.MaxWidth(75));
-                rearOrFrontPowered.floatValue = 1 - EditorGUILayout.FloatField("", (1-rearOrFrontPowered.floatValue)*100, GUILayout.MaxWidth(50)) /100;
-                rearOrFrontPowered.floatValue = EditorGUILayout.Slider("", rearOrFrontPowered.floatValue*100, 0, 100, GUILayout.MaxWidth(Screen.width-310)) /100;
-                EditorGUILayout.LabelField("Front", GUILayout.MaxWidth(60));
-                //EditorGUILayout.LabelField("When driving with ", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(100));
-                //pickedOrientationAirSlowdowm = EditorGUILayout.FloatField("", pickedOrientationAirSlowdowm * speedUnitScaler, GUILayout.MaxWidth(65)) / speedUnitScaler;
-                //EditorGUILayout.LabelField(speedUnitWord + ", the air resistance slows it by ", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(182));
-                //pickedAirSlowdownAtOrientation = EditorGUILayout.FloatField("", pickedAirSlowdownAtOrientation, GUILayout.MaxWidth(65));
-                //EditorGUILayout.LabelField(" m/s^2 ", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(80));
-                //GUILayout.FlexibleSpace();
-            }
-            EditorGUILayout.EndHorizontal();
+            //    //GUILayout.FlexibleSpace();
+            //    EditorGUILayout.LabelField("(%) Rear", GUILayout.MaxWidth(75));
+            //    rearOrFrontPowered.floatValue = 1 - EditorGUILayout.FloatField("", (1-rearOrFrontPowered.floatValue)*100, GUILayout.MaxWidth(50)) /100;
+            //    rearOrFrontPowered.floatValue = EditorGUILayout.Slider("", rearOrFrontPowered.floatValue*100, 0, 100, GUILayout.MaxWidth(Screen.width-310)) /100;
+            //    EditorGUILayout.LabelField("Front", GUILayout.MaxWidth(60));
+            //    //EditorGUILayout.LabelField("When driving with ", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(100));
+            //    //pickedOrientationAirSlowdowm = EditorGUILayout.FloatField("", pickedOrientationAirSlowdowm * speedUnitScaler, GUILayout.MaxWidth(65)) / speedUnitScaler;
+            //    //EditorGUILayout.LabelField(speedUnitWord + ", the air resistance slows it by ", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(182));
+            //    //pickedAirSlowdownAtOrientation = EditorGUILayout.FloatField("", pickedAirSlowdownAtOrientation, GUILayout.MaxWidth(65));
+            //    //EditorGUILayout.LabelField(" m/s^2 ", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(80));
+            //    //GUILayout.FlexibleSpace();
+            //}
+            //EditorGUILayout.EndHorizontal();
+            DrawRearFrontSlider(ref rearOrFrontPowered);
+            accelerationRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", accelerationRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
 
             EditorGUI.indentLevel--;
         }
@@ -492,10 +505,32 @@ public class CarEditor : Editor
         GUILayout.Space(10);
 
 
-        //DECELLERATION
+        //BREAK
         DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showDeccelerationSettings = EditorGUILayout.Foldout(showDeccelerationSettings, "Decelleration");
-        if (showDeccelerationSettings)
+        showBreakSettings = EditorGUILayout.Foldout(showBreakSettings, "Break");
+        if (showBreakSettings)
+        {
+            breakMaxSlowdown.floatValue = EditorGUILayout.FloatField("break deceleration", breakMaxSlowdown.floatValue);
+            DrawRearFrontSlider(ref breakAppliedToFrontWheels);
+            breakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", breakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
+        }
+        GUILayout.Space(10);
+
+        //HANDBREAK
+        DrawNextSectionAndClosePreviouse(ref sectionCount);
+        showHandBreakSettings = EditorGUILayout.Foldout(showHandBreakSettings, "Handbreak");
+        if (showHandBreakSettings)
+        {
+            handBreakMaxSlowdown.floatValue = EditorGUILayout.FloatField("handbreak deceleration", handBreakMaxSlowdown.floatValue);
+            DrawRearFrontSlider(ref handBreakAppliedToFrontWheels);
+            handBreakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", handBreakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
+        }
+        GUILayout.Space(10);
+
+        //DECELERATION
+        DrawNextSectionAndClosePreviouse(ref sectionCount);
+        showDecelerationSettings = EditorGUILayout.Foldout(showDecelerationSettings, "Deceleration");
+        if (showDecelerationSettings)
         {
             //air Resistance
             EditorGUILayout.BeginHorizontal();
@@ -523,6 +558,9 @@ public class CarEditor : Editor
             slowByRollFriction.floatValue = EditorGUILayout.FloatField("Slow by Rolling Friction", slowByRollFriction.floatValue);
         }
         GUILayout.Space(10);
+
+        
+
 
 
         //front wheel Position and Spring Settings
@@ -714,7 +752,8 @@ public class CarEditor : Editor
         }
         EditorGUILayout.EndHorizontal();
 
-        
+        if (!endlessLengthwiseGrip.boolValue) lengthwiseGripAffectedBySidewaysSlip.floatValue = EditorGUILayout.Slider("lengthwise Grip affected by sideways Slip", lengthwiseGripAffectedBySidewaysSlip.floatValue * 100, 0, 100) / 100;
+        if (!endlessSidewaysGrip.boolValue) sidewaysGripAffectedByLengthwiseSlip.floatValue = EditorGUILayout.Slider("sideways Grip affected by lengthwise Slip", sidewaysGripAffectedByLengthwiseSlip.floatValue * 100, 0, 100) / 100;
 
         //Solid Ground Grip Settings
         EditorGUILayout.LabelField("Grip Settings on Solid Ground", EditorStyles.miniBoldLabel);
@@ -840,6 +879,12 @@ public class CarEditor : Editor
             + (rearSteerAt30MS.floatValue + rearSteerDifFor30ms * (2 * Mathf.Pow(2, -1 / 0.5f) - 1)) + "° at " + (15 * speedUnitScaler).ToString("F2") + speedUnitWord + ", " + Environment.NewLine
             + rearSteerAt30MS.floatValue + "° at " + (30 * speedUnitScaler).ToString("F2") + speedUnitWord + Environment.NewLine +
             "and " + (rearSteerAt30MS.floatValue + rearSteerDifFor30ms * (2 * Mathf.Pow(2, -1 / 2f) - 1)) + "° at " + (60 * speedUnitScaler).ToString("F2") + speedUnitWord + ")"));
+        //Balancing Steer
+        EditorGUILayout.LabelField("Balancing Steer", EditorStyles.miniBoldLabel);
+        frontSteerTowardsSlide.floatValue = EditorGUILayout.Slider("(%) fw Steer Towards Slide", frontSteerTowardsSlide.floatValue * 100, 0, 100) / 100;
+        maxFrontAngleTowardsSlide.floatValue = EditorGUILayout.FloatField("(°) fw Max Steer Towards Slide", maxFrontAngleTowardsSlide.floatValue);
+        rearSteerTowardsSlide.floatValue = EditorGUILayout.Slider("(%) rw Steer Towards Slide", rearSteerTowardsSlide.floatValue * 100, 0, 100) / 100;
+        maxRearAngleTowardsSlide.floatValue = EditorGUILayout.FloatField("(°) rw Max Steer Towards Slide", maxRearAngleTowardsSlide.floatValue);
         GUILayout.Space(15);
         //if (isRepainting) sectionHeights[sectionCount] = GUILayoutUtility.GetLastRect().yMax;
 
@@ -1059,7 +1104,7 @@ public class CarEditor : Editor
     void DrawNextSectionAndClosePreviouse(ref int sectionCount)
     {
         ClosePreviouseSection(sectionCount);
-        GUI.DrawTexture(new Rect(0, sectionHeights[sectionCount], Screen.width, sectionHeights[++sectionCount]), GetAlternatingBackgroundTex(sectionCount), ScaleMode.StretchToFill);
+        if (Event.current.type == EventType.Repaint)  GUI.DrawTexture(new Rect(0, sectionHeights[sectionCount], Screen.width, sectionHeights[++sectionCount]), GetAlternatingBackgroundTex(sectionCount), ScaleMode.StretchToFill);
     }
     void ClosePreviouseSection(int sectionCount)
     {
@@ -1092,9 +1137,21 @@ public class CarEditor : Editor
         
     }
 
+    void DrawRearFrontSlider(ref SerializedProperty value)
+    {
+        EditorGUILayout.BeginHorizontal();
+        {
+            EditorGUILayout.LabelField("(%) Rear", GUILayout.MaxWidth(75));
+            value.floatValue = 1 - EditorGUILayout.FloatField("", (1 - value.floatValue) * 100, GUILayout.MaxWidth(50)) / 100;
+            value.floatValue = EditorGUILayout.Slider("", value.floatValue * 100, 0, 100, GUILayout.MaxWidth(Screen.width - 310)) / 100;
+            EditorGUILayout.LabelField("Front", GUILayout.MaxWidth(60));
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
 }
 
-
+#endif
 
 
 //EditorGUILayout.BeginHorizontal();

@@ -77,7 +77,7 @@ public class SolidGrounGrip : GripCurve
         else if (k2.value > 0.95f) k2.value = 0.95f;
         if (k2.time < k1.time) k2.time = k1.time+0.02f;
         else if (k2.time > 0.97f) k2.time = 0.97f;
-        k3.time = 1;
+        k3.time = 2;
         if (k3.value < 0.05f) k3.value = 0.05f;
         else if (k3.value > 0.95f) k3.value = 0.95f;
 

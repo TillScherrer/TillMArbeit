@@ -40,7 +40,8 @@ public class CurveHolder
         float sampleValue = timeInCurve * (accuracyOfAccelerationValues + 1);
         int fromSample = Mathf.FloorToInt(sampleValue);
         int toSample = Mathf.CeilToInt(sampleValue);
-        if (toSample > accuracyOfAccelerationValues) toSample -= 1;
+        if (fromSample > accuracyOfAccelerationValues) fromSample = accuracyOfAccelerationValues;
+        if (toSample > accuracyOfAccelerationValues) toSample = accuracyOfAccelerationValues;
         //Debug.Log("from sample= " + fromSample);
         //Debug.Log("to sample= " + toSample);
         //Debug.Log("accel at sample= " + rawAccelerationValues[fromSample]);

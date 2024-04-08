@@ -1,6 +1,7 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
-using Unity.VisualScripting;
+//using Unity.VisualScripting;
 
 [CustomPropertyDrawer(typeof(Grip), true)]
 public class GripPropertyDrawer : ExtendedScriptableObjectDrawer
@@ -19,6 +20,6 @@ public class GripPropertyDrawer : ExtendedScriptableObjectDrawer
     }
 }
 
-
+#endif
 
 
