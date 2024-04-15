@@ -50,16 +50,16 @@ public class Car : MonoBehaviour
     //breaking Settings
     [SerializeField] float breakMaxSlowdown = 10f;
     [SerializeField] float breakAppliedToFrontWheels = 1f;
-    //[SerializeField] float breakAppliedToRearWheels = 1f;
     [SerializeField] float breakRestrainToOptimiseGrip = 1f;
+    [SerializeField] float breakLimitedByGrip = 1f;
     [SerializeField] float handBreakMaxSlowdown = 20f;
     [SerializeField] float handBreakAppliedToFrontWheels = 1f;
-    //[SerializeField] float handBreakAppliedToRearWheels = 1f;
     [SerializeField] float handBreakRestrainToOptimiseGrip = 0f;
+    [SerializeField] float handBreakLimitedByGrip = 1f;
 
 
     //front wheel physical position and spring settings
-    [SerializeField] bool showFrontWheelSettings;
+    [SerializeField] bool showWheelSettings;
     [SerializeField] Vector3 frontRightWheelCenter = new Vector3(1, -0.3f, 1);
     [SerializeField] float frontWheelRadius = 0.25f;
     //[SerializeField] float frontWheelRatioOfCarsWeight = 0.01f; //car ca. 1%, Monstertruck ca. 10%
@@ -69,21 +69,17 @@ public class Car : MonoBehaviour
     [SerializeField] float frontWheelOutwardThickness = 0;
     [SerializeField] int frontWheelShapeAccuracy = 4;
     [SerializeField] float frontWheelSuspensionDistanceToLiftCarWeight = 0.1f;
-    [SerializeField] float frontWheelDamping = 0.4f;
     [SerializeField] float frontSuspHardCap = 0.2f;
 
     //rear wheel physical position and spring settings
-    [SerializeField] bool showRearWheelSettings;
     [SerializeField] Vector3 rearRightWheelCenter = new Vector3(1, -0.3f, -1);
     [SerializeField] float rearWheelRadius = 0.25f;
-    //[SerializeField] float rearWheelRatioOfCarsWeight = 0.01f;
     [SerializeField] float rearWheelRotationHoldsRatioOfSpeed = 0.025f;
     [SerializeField] bool rearUse3DWheelPhysics = false;
     [SerializeField] float rearWheelInwardThickness = 0.1f;
     [SerializeField] float rearWheelOutwardThickness = 0;
     [SerializeField] int rearWheelShapeAccuracy = 4;
     [SerializeField] float rearWheelSuspensionDistanceToLiftCarWeight = 0.1f;
-    [SerializeField] float rearWheelDamping = 0.4f;
     [SerializeField] float rearSuspHardCap = 0.2f;
 
     //spring context
@@ -92,10 +88,17 @@ public class Car : MonoBehaviour
     [SerializeField] float lateralAttackHeightLift = 0f;
     [SerializeField] float longitudalAttackHeightLift = 0f;
 
-    //anti-roll-bar
+    //balance
+    [SerializeField] float damping = 0.4f;
+    [SerializeField] float antiJumpSuspension = 0f;
     [SerializeField] float frontAntiRollBar = 0f;
     [SerializeField] float rearAntiRollBar = 0f;
-    //[SerializeField] float frontAntiRollBar = 0f;
+    [SerializeField] TurnUpwardsField TurnUpwardsWithZeroWheels = new TurnUpwardsField();
+    [SerializeField] TurnUpwardsField TurnUpwardsWithOneOrTwoWheels = new TurnUpwardsField();
+    [SerializeField] TurnUpwardsField TurnUpwardsWithThreeOrFourWheels = new TurnUpwardsField();
+    [SerializeField] float minFlightDurationForCorrection = 1.5f;
+    [SerializeField] float maxAngularVelCorrectionInAir = 0f;
+    [SerializeField] bool fixFlightRotationAtLeavingGround = false;
 
 
     [SerializeField] LayerMask solidGround;
@@ -144,6 +147,11 @@ public class Car : MonoBehaviour
     [SerializeField] float maxFrontAngleTowardsSlide = 0;
     [SerializeField] float rearSteerTowardsSlide = 0;
     [SerializeField] float maxRearAngleTowardsSlide = 0;
+    //Arcady Steer
+    [SerializeField] float disableNaturalSteering = 0;
+    [SerializeField] float maxAnglesPSChangeAtArcadySteering = 50f;
+    //Air Steer
+    [SerializeField] float maxAnglesPSChangeAtAirSteering = 0f;
 
 
     //Input Section
@@ -249,6 +257,11 @@ public class Car : MonoBehaviour
     float frontSteeringAngle = 0;
     float rearSteeringAngle = 0;
 
+    int numberOfGroundedWheels = 0;
+    float timeInAir = 0;
+    bool triggeredGroundLeftAlready = false;
+    bool justLeftGround = false;
+    float lastContactWithGround = 0;
 
 
     //input bools
@@ -261,14 +274,13 @@ public class Car : MonoBehaviour
 
 
     //delete after developement is done
-    float testBasicSlowdown = 2;
-    float testBreakingSlowdown = 8;
+    //float testBasicSlowdown = 2;
+    //float testBreakingSlowdown = 8;
 
 
     // Start is called before the first frame update
     void Start()
     {
-        Debug.Log("vector3 " + new Vector3());
         UpdateDependendParameters();
         UpdateArrayAccessibleParameters(false);
         ValidateGearSettings();
@@ -404,6 +416,7 @@ public class Car : MonoBehaviour
         //Vector3 relUp = transform.rotation * Vector3.up;
 
         FindGroundInteraction(out hitPoints, out hitNormals, out absoluteSpringCompressions, out collidedGroundType);
+        ComputeGroundAndAirStatus();
         hitPointForLateral = new Vector3[] { GetLiftedPoint(hitPoints[0], lateralAttackHeightLift), GetLiftedPoint(hitPoints[1], lateralAttackHeightLift) , GetLiftedPoint(hitPoints[2], lateralAttackHeightLift) , GetLiftedPoint(hitPoints[3], lateralAttackHeightLift) };
         hitPointForLongitudal = new Vector3[] { GetLiftedPoint(hitPoints[0], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[1], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[2], longitudalAttackHeightLift), GetLiftedPoint(hitPoints[3], longitudalAttackHeightLift) };
 
@@ -416,14 +429,12 @@ public class Car : MonoBehaviour
         //Vector3[] verticalForcesWithoutDamping = new Vector3[4];
         for (int i = 0; i < 4; i++)
         {
-           
-
             //SUSPENSION
             //suspension
             //suspPowers[i] = springCompressions[i] * springPower[i];
             //damping
             float deltaSpringCompression = absoluteSpringCompressions[i] - previousSpringCompressions[i];
-            float dampingCoefficient = i < 2 ? frontWheelDamping : rearWheelDamping;
+            float dampingCoefficient = i < 2 ? damping : damping;
             dampingForces[i] = dampingCoefficient * deltaSpringCompression / Time.fixedDeltaTime * springCompressions[i] * rb.mass;
             //verticalForcesWithoutDamping[i] = hitNormals[i] * suspPowers[i] * rb.mass;
 
@@ -446,29 +457,22 @@ public class Car : MonoBehaviour
                     rb.AddRelativeTorque(new Vector3(angularChange.x * inertiaTensorWS.x, angularChange.y * inertiaTensorWS.y, angularChange.z * inertiaTensorWS.z), ForceMode.Impulse);
                     rb.AddForce(directionalChange * rb.mass, ForceMode.Impulse);
                 }
-
             }
-
-
-
-            
-
         }
+
+
+
 
         //STEERING
         float currentSpeed = Vector3.Dot(rb.velocity, transform.forward);
-        float frontSteerDifFor30ms = frontSteerAtZeroSpeed - frontSteerAt30MS;
+        float frontSteerDifFor30ms = frontSteerAtZeroSpeed - frontSteerAt30MS; //front
         float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
         UpdateRawSteerAngle(ref frontSteeringAngle, currentMaxFrontSteerAngle);
-        //set steering Angle (rear)
-        float rearSteerDifFor30ms = rearSteerAtZeroSpeed - rearSteerAt30MS;
+        float rearSteerDifFor30ms = rearSteerAtZeroSpeed - rearSteerAt30MS;    //rear
         float currentMaxRearSteerAngle = rearSteerAt30MS + rearSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
         UpdateRawSteerAngle(ref rearSteeringAngle, currentMaxRearSteerAngle);
-        //TO DO (in method below): NOW USE ACKERMAN TO SET INDIVIDUAL STEERING ANGLE OF WHEELS
         UpdateSteeringAngles(hitPoints);
         
-        //Debug.Log("front Steering Angle = " + frontSteeringAngle);
-        //Debug.Log("rear Steering Angle = " + rearSteeringAngle);
 
         //GEAR SHIFTING  
         ComputeGearShiftState(); //(input has already been managed in "Update()". Therefor the registered input is computed here)
@@ -641,8 +645,8 @@ public class Car : MonoBehaviour
 
             float leftWheelLongitudalSlipRatio = GetDirectionalLongitudalSlipRatio(currentWheelSpinningSpeeds[0 + i], fowardSpeedOverGroundAtWheel[0 + i], forceDirection);
             float rightWheelLongitudalSlipRatio = GetDirectionalLongitudalSlipRatio(currentWheelSpinningSpeeds[1 + i], fowardSpeedOverGroundAtWheel[1 + i], forceDirection);
-            Debug.Log("leftWheelLongitudalSlipRatio " + leftWheelLongitudalSlipRatio);
-            Debug.Log("rightWheelLongitudalSlipRatio " + rightWheelLongitudalSlipRatio);
+            //Debug.Log("leftWheelLongitudalSlipRatio " + leftWheelLongitudalSlipRatio);
+            //Debug.Log("rightWheelLongitudalSlipRatio " + rightWheelLongitudalSlipRatio);
 
 
             leftRelSpinShare = rightWheelLongitudalSlipRatio - leftWheelLongitudalSlipRatio + 0.5f;
@@ -650,7 +654,7 @@ public class Car : MonoBehaviour
             else if (leftRelSpinShare > 1) leftRelSpinShare = 1;
             rightRelSpinShare = 1 - leftRelSpinShare;
 
-            Debug.Log("leftRelSpinShare = " + leftRelSpinShare);
+            //Debug.Log("leftRelSpinShare = " + leftRelSpinShare);
 
             //Debug.Log("rearWheelsPowerShare " + rearWheelsPowerShare);
             //Debug.Log("frontWheelsPowerShare " + frontWheelsPowerShare);
@@ -785,11 +789,26 @@ public class Car : MonoBehaviour
             //find spinning speed for best slip ratio (the slip ratio, where the best grip is reached)
             float totalCurrentSpeedOverGround = Mathf.Sqrt(lengthwiseSpeedOverGround * lengthwiseSpeedOverGround + sideSlideSpeeds[i] * sideSlideSpeeds[i]);
             float bestSlipRatio = collidedGroundType[i] == 1 ? gripOnSolidGround.slipRatioOfMaxGrip : 2; //ToDo: case für keinen ground einfügen und gripOnLooseGround.slipRatioOfMaxGrip einfügen.
-            float bestSlip = bestSlipRatio * totalCurrentSpeedOverGround;
-            float bestLengthwiseSlip = Mathf.Sqrt(bestSlip * bestSlip - sideSlideSpeeds[i] * sideSlideSpeeds[i]);
-            if (float.IsNaN(bestLengthwiseSlip)) { bestLengthwiseSlip = 0;} //this means the best slip ratio can not even be reached //To Do: create special case for this or threat it in other cases
-            float plannedSpinningSpeedForBestSlipRatio = lengthwiseSpeedOverGround + availablePowerDirection * bestLengthwiseSlip;
+            //float bestSlip = bestSlipRatio * totalCurrentSpeedOverGround;
+            //float bestLengthwiseSlip = Mathf.Sqrt(bestSlip * bestSlip - sideSlideSpeeds[i] * sideSlideSpeeds[i]);
+            //if (float.IsNaN(bestLengthwiseSlip)) { bestLengthwiseSlip = 0;} //this means the best slip ratio can not even be reached //To Do: create special case for this or threat it in other cases
+            //float plannedSpinningSpeedForBestSlipRatio = lengthwiseSpeedOverGround + availablePowerDirection * bestLengthwiseSlip;
 
+            float slipAngleRadiants = GetAbsSlipAngle(lengthwiseSpeedOverGround, sideSlideSpeeds[i]) * Mathf.Deg2Rad;
+            float minSlipRatioByAngle = Mathf.Sqrt(2 - 2 * Mathf.Cos(slipAngleRadiants));
+            float plannedK;
+            if(minSlipRatioByAngle >= bestSlipRatio)
+            {
+                // when the best slip Ratio can not be reached, even without longitudal slip, because lateral slip already creates a too high value,
+                // at least the best available Slip is reached with K = 1 
+                plannedK = 1;
+            }
+            else
+            {
+                plannedK = Mathf.Cos(slipAngleRadiants) + 0.5f * Mathf.Sqrt(2) * Mathf.Sqrt(Mathf.Cos(slipAngleRadiants * 2) + 2 * bestSlipRatio * bestSlipRatio - 1);
+            }
+
+            float plannedSpinningSpeedForBestSlipRatio = lengthwiseSpeedOverGround + Mathf.Abs(lengthwiseSpeedOverGround) * (plannedK - 1) * availablePowerDirection;
 
             float availablePowerForBestSlipRatio = availablePower + (spinningSpeed - plannedSpinningSpeedForBestSlipRatio) * wheelRotationHoldsRatioOfSpeed;
             (float lengthwise, float sideways) availableGripPowerWithBestSlipRatioSpin = GetSpecificGripPower(plannedSpinningSpeedForBestSlipRatio, lengthwiseSpeedOverGround, sideSlideSpeeds[i], availablePowerDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
@@ -1176,7 +1195,8 @@ public class Car : MonoBehaviour
         //float timeUsed = (Time.realtimeSinceStartup - currentTime) / Time.fixedDeltaTime;
         //Debug.Log("Timeratio used is " + timeUsed);
 
-
+        //Compute Ground-Air-Status
+        PerformInAirBalance();
 
         //Manage Audio
         ManageAudioAndGUI(currentGear, currentAverageWheelSpinningSpeed, currentSpeed); //TO CHANGE: USE WHEEL SPIN INSTEAD
@@ -1207,6 +1227,7 @@ public class Car : MonoBehaviour
         hitNormals = new Vector3[4];
         springCompressions = new float[] {0,0,0,0};
         collidedGroundType = new int[] { 0, 0, 0, 0 }; //0 = no; 1 = solidGround; 2 = looseGround
+        int numberOfContacts = 0;
 
         for(int i = 0; i < 4; i++)
         {
@@ -1231,6 +1252,7 @@ public class Car : MonoBehaviour
                     //Debug.DrawRay(hit.point, hit.normal, UnityEngine.Color.green);
                     collidedGroundType[i] = (solidGround == (solidGround | (1 << hit.transform.gameObject.layer))) ? 1 : 2;
                     springCompressions[i] = (hit.point - endPoint).magnitude;
+                    numberOfContacts++;
                 }
             }
             else
@@ -1276,10 +1298,12 @@ public class Car : MonoBehaviour
                         }
                     }
                 }
+                if (springCompressions[i] != 0) numberOfContacts++;
             }
             Debug.DrawRay(hitPoints[i], hitNormals[i] * springCompressions[i], UnityEngine.Color.green);
             //Debug.Log("Spring compression[" + i + "]= " + springCompressions[i]);
         }
+        numberOfGroundedWheels = numberOfContacts;
     }
 
 
@@ -1550,11 +1574,49 @@ public class Car : MonoBehaviour
 
     void UpdateSteeringAngles(Vector3[] hitPoints)
     {
-        //TO DO: Apply Ackermann Steering here!
-        rawSteeringAngles[0] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
-        rawSteeringAngles[1] = frontSteeringAngle;//20 * Input.GetAxis("Horizontal");
-        rawSteeringAngles[2] = rearSteeringAngle;
-        rawSteeringAngles[3] = rearSteeringAngle;
+        // try to calculate the local position of the turning center from the Bicycle-Model to apply Ackermann-Steering
+        float zDistBetweenRearAndFrontWheels = frontRightWheelCenter.z - rearRightWheelCenter.z;
+        float frontZPerX = Mathf.Sin(frontSteeringAngle * Mathf.Deg2Rad);
+        float rearZPerX = Mathf.Sin(rearSteeringAngle * Mathf.Deg2Rad);
+        float linesGettingCloserOnYPerX = frontZPerX - rearZPerX;
+        if(Mathf.Abs(linesGettingCloserOnYPerX) < 0.0000000000000001f)
+        {
+            //can not apply ackerman steering when front and rear wheels are parallel
+            rawSteeringAngles[0] = frontSteeringAngle;
+            rawSteeringAngles[1] = frontSteeringAngle;
+            rawSteeringAngles[2] = rearSteeringAngle;
+            rawSteeringAngles[3] = rearSteeringAngle;
+        }
+        else
+        {
+            // calculate the local position of the turning center
+            float xOfTurningCenter = zDistBetweenRearAndFrontWheels / linesGettingCloserOnYPerX; // a positive value tells how far the turning center is on the right side, a negative for the left side
+            float zDistFromFrontWheels = xOfTurningCenter * frontZPerX;
+            float zDistFromRearWheels = xOfTurningCenter * rearZPerX;
+            
+            // calculate the individually adapted steering angles of ackermann steering
+            float rFrontAckermannAngle = Mathf.Atan(zDistFromFrontWheels / (xOfTurningCenter - frontRightWheelCenter.x)) * Mathf.Rad2Deg;
+            float lFrontAckermannAngle = Mathf.Atan(zDistFromFrontWheels / (xOfTurningCenter + frontRightWheelCenter.x)) * Mathf.Rad2Deg;
+            float rRearAckermannAngle = Mathf.Atan(zDistFromRearWheels / (xOfTurningCenter + rearRightWheelCenter.x)) * Mathf.Rad2Deg;
+            float lRearAckermannAngle = Mathf.Atan(zDistFromRearWheels / (xOfTurningCenter - rearRightWheelCenter.x)) * Mathf.Rad2Deg;
+
+            //Lerp between basic steering Angle and the adapted value for Ackermann Steering. A negative value of Ackermann Steering creates "Anti-Ackermann-Steering" (which is the literal opposide)
+            rawSteeringAngles[0] = Mathf.LerpUnclamped(frontSteeringAngle, rFrontAckermannAngle, ackermanSteering);
+            rawSteeringAngles[1] = Mathf.LerpUnclamped(frontSteeringAngle, lFrontAckermannAngle, ackermanSteering);
+            rawSteeringAngles[2] = Mathf.LerpUnclamped(rearSteeringAngle, rRearAckermannAngle, ackermanSteering);
+            rawSteeringAngles[3] = Mathf.LerpUnclamped(rearSteeringAngle, lRearAckermannAngle, ackermanSteering);
+
+        }
+
+
+
+
+        //rawSteeringAngles[0] = frontSteeringAngle;
+        //rawSteeringAngles[1] = frontSteeringAngle;
+        //rawSteeringAngles[2] = rearSteeringAngle;
+        //rawSteeringAngles[3] = rearSteeringAngle;
+
+
 
         //from the rawSteeringAngle some adjustment towards the sliding direction happens here to get the definite steeringAngle
         for(int i=0; i<4; i++)
@@ -1933,38 +1995,35 @@ public class Car : MonoBehaviour
     (float slilpRatio, bool usesFowardForce) GetSlipRatio(float fowardSpeedOverGround, float sidewaysSlip, float wheelSpin, int intendedDirection)
     {
         bool usesFowardForce = fowardSpeedOverGround < wheelSpin || (fowardSpeedOverGround==wheelSpin && intendedDirection>0);
-        bool useSlipRatioForBreaking = Mathf.Abs(fowardSpeedOverGround) > Mathf.Abs(wheelSpin) || (Mathf.Abs(fowardSpeedOverGround) == Mathf.Abs(wheelSpin) && (wheelSpin*intendedDirection<0));
+        //bool useSlipRatioForBreaking = Mathf.Abs(fowardSpeedOverGround) > Mathf.Abs(wheelSpin) || (Mathf.Abs(fowardSpeedOverGround) == Mathf.Abs(wheelSpin) && (wheelSpin*intendedDirection<0));
         bool oppositeDirection = fowardSpeedOverGround * wheelSpin < 0;
-        float slipMagnitude = Mathf.Sqrt(fowardSpeedOverGround*fowardSpeedOverGround+sidewaysSlip*sidewaysSlip);
+        //float slipMagnitude = Mathf.Sqrt(fowardSpeedOverGround*fowardSpeedOverGround+sidewaysSlip*sidewaysSlip);
+
+        //the original formula does not tread slip Angles above 90 Degreee correctly, therefore the Absolute value of "fowardSpeedOverGround" is used
+        float slipAngle = GetAbsSlipAngle(fowardSpeedOverGround, sidewaysSlip);
 
         float slipRatio;
 
-        if (oppositeDirection)
-        {
-            slipRatio = 2;
-        }
-        else if (useSlipRatioForBreaking)
-        {
-            slipRatio = 1 - (slipMagnitude / Mathf.Abs(wheelSpin));
-        }
-        else
-        {
-            if (Mathf.Abs(wheelSpin) < slipMagnitude)
-            {
-                slipRatio = 0;
-            }
-            else
-            {
-                slipRatio = (Mathf.Abs(wheelSpin) - slipMagnitude) / slipMagnitude;
-            }
-        }
-        if (slipRatio > 2) slipRatio = 2;
-        if (slipRatio < 0) slipRatio = 0;
+        
+        float K = Mathf.Abs(wheelSpin) / Mathf.Abs(fowardSpeedOverGround);
+        if (K < 1) K = 2 - K; // The original formula does not work correctly for breaking (aka K < 1). This fixes the issue by treating it equal to acceleration
+        // |1-K| would be the lengthwise slipRatio
+        // the slipAngle can also increase the slipRatio and leads to a SlipRatio of 1 by itself at 90 Degree
+        slipRatio = Mathf.Sqrt(Mathf.Pow(K * Mathf.Sin(slipAngle*Mathf.Deg2Rad), 2) + Mathf.Pow(1 - K * Mathf.Cos(slipAngle*Mathf.Deg2Rad), 2));
+
+        // the original formula does not tread movement and wheel spin in different directions correctly.
+        // The opposite-direction-wheel speed has more slip than a locked-wheel-break and is therefore set to maximum slip
+        if (oppositeDirection) slipRatio = 1;
+
+        slipRatio = Mathf.Clamp01(slipRatio);
 
         return (slipRatio, usesFowardForce);
     }
 
-
+    float GetAbsSlipAngle(float fowardSpeedOverGround, float sidewaysSlip)
+    {
+        return Vector2.Angle(Vector2.up, new Vector2(sidewaysSlip, Mathf.Abs(fowardSpeedOverGround)));
+    }
 
     float GetRawGripBySlipRatioAbs (float slipRatio, int groundType)
     {
@@ -1979,7 +2038,7 @@ public class Car : MonoBehaviour
     }
     void DrawPhysical3DWheelShape()
     {
-        for (int i = (showFrontWheelSettings && frontUse3DWheelPhysics ? 0 : 2); i < (showRearWheelSettings && rearUse3DWheelPhysics ? 4 : 2); i++)
+        for (int i = (showWheelSettings && frontUse3DWheelPhysics ? 0 : 2); i < (showWheelSettings && rearUse3DWheelPhysics ? 4 : 2); i++)
         {
             Vector3 startPoint = transform.TransformPoint(wheel3DCenters[i]);
             int usedShapeAccuracy = (i < 2 ? frontWheelShapeAccuracy : rearWheelShapeAccuracy);
@@ -2151,6 +2210,152 @@ public class Car : MonoBehaviour
         return (availableLengthwiseGripPower, availableSidewaysGripPower);
     }
 
+
+
+    void PerformInAirBalance()
+    {
+        bool doInstantCorrection = justLeftGround && fixFlightRotationAtLeavingGround;
+        if ((timeInAir < minFlightDurationForCorrection || maxAngularVelCorrectionInAir==0) && !doInstantCorrection) return;
+
+        Vector3 startingCenter = transform.position;
+
+        float timeStepDuration = 0.05f; //predicted time per ray in seconds
+        int numberOfTimesteps = doInstantCorrection ? 300 : 30; // 300 * 0.05s = 15s predicted duration at leaving ground and 25*0.05s = 1.5s predicted duration in Air
+        Vector3[] v0 = new Vector3[numberOfTimesteps + 1];
+        Vector3[,] dotCurves = new Vector3[3, numberOfTimesteps + 1]; //It will contain three "curves", each represented by a row of points.
+                                                                      // The points will be connected by raycasts to form the curve and check where the curve collides with terrain.
+        Vector3[] hitPos = new Vector3[3];
+        float[] hitT = new float[3]; //a curve represents the car's predicted movement. "hitT[curveIndex]" saves the estimated time from each curve to hit terrain.
+        Quaternion[] moveDirRotAtIndex = new Quaternion[numberOfTimesteps + 1];
+
+        for (int i = 0; i <= numberOfTimesteps; i++)
+        {
+            moveDirRotAtIndex[i] = Quaternion.LookRotation(rb.velocity + i * timeStepDuration * Physics.gravity, Vector3.up);
+            v0[i] = startingCenter + rb.velocity * (float)i * timeStepDuration + 0.5f * Physics.gravity * (float)i * (float)i * timeStepDuration * timeStepDuration;
+            if (i > 0) Debug.DrawLine(v0[i - 1], v0[i], Color.black, Time.fixedDeltaTime);
+        }
+
+        //Vector3[] DirectionOfHittingRays = new Vector3[]{new Vector3(), new Vector3(), new Vector3()}; //NOTE: this is the direction of the casted ray, not the hitten surface's
+        RaycastHit hit;
+        for (int curveIndex = 0; curveIndex < 3; curveIndex++)
+        {
+            //each line has a baseOffset to seperate it's position from the other lines. For each point in a line this Offset is Rotatet into the estimated move direction at that point
+            Vector3 lineBaseOffset = curveIndex == 0 ? new Vector3(0, 1.5f, 0)
+                                   : curveIndex == 1 ? new Vector3(-0.866f, -0.5f, 0)
+                                                    : new Vector3(0.866f, -0.5f, 0);
+            dotCurves[curveIndex, 0] = v0[0] + moveDirRotAtIndex[0] * lineBaseOffset;
+            for (int i = 0; i < numberOfTimesteps; i++)
+            {
+                dotCurves[curveIndex, i + 1] = v0[i + 1] + moveDirRotAtIndex[i + 1] * lineBaseOffset;
+                float rayLength = Vector3.Distance(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1]);
+                Debug.DrawLine(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1], Color.magenta, Time.fixedDeltaTime);
+                if (Physics.Raycast(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1] - dotCurves[curveIndex, i], out hit, rayLength, combinedGroundLayers))
+                {
+                    hitPos[curveIndex] = hit.point;
+                    hitT[curveIndex] = i * timeStepDuration + (hit.point - dotCurves[curveIndex, i]).magnitude / rayLength * timeStepDuration;
+                    //DirectionOfHittingRays[curveIndex] = dotCurves[curveIndex, i + 1] - dotCurves[curveIndex, i];
+                    break;
+                }
+            }
+        }
+
+        float minDurationTillHit = 0.05f;
+        if (hitT[0] > minDurationTillHit && hitT[1] > minDurationTillHit && hitT[2] > minDurationTillHit)
+        {
+            float unreducedTimeToContact = Mathf.Min(hitT[0], hitT[1], hitT[2]);
+            float speedAtContact = (rb.velocity + unreducedTimeToContact * Physics.gravity).magnitude;
+            float earlyerArrival = 0.3f / speedAtContact; //the wheels arrive earlyer at the ground than the car, so time needs to be subtracted.
+            float timeToContact = unreducedTimeToContact - earlyerArrival;
+            if (timeToContact > minDurationTillHit)
+            {
+                Vector3 contactNormal = Vector3.Cross(hitPos[2] - hitPos[0], hitPos[1] - hitPos[0]);
+                float estimadedYRotOnArival = rb.rotation.eulerAngles.y + rb.angularVelocity.y * Mathf.Rad2Deg * timeToContact;
+
+                float AdaptationForWantedXRot = Vector3.Angle(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal) - 90;
+                Quaternion aimedRotation = Quaternion.Euler(AdaptationForWantedXRot, 0, 0) * Quaternion.LookRotation(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal);
+                //Vector3 wantedRotation = Quaternion.Lerp(rb.rotation, aimedRotation, Time.fixedDeltaTime / timeToContact).eulerAngles;
+
+                //Goal orientated Version
+                Vector3 wantedAngularVelChange = Vector3.zero;
+                Quaternion expectedRotChange = Quaternion.Euler(
+                        rb.angularVelocity.x * Mathf.Rad2Deg * timeToContact,
+                        rb.angularVelocity.y * Mathf.Rad2Deg * timeToContact,
+                        rb.angularVelocity.z * Mathf.Rad2Deg * timeToContact
+                        );
+                //A * B * C = D      means    expected * (CHANGE * current) = aimed 
+                //B = A^-1 * D * C^-1
+                Quaternion delta = Quaternion.Inverse(expectedRotChange) * aimedRotation * Quaternion.Inverse(rb.rotation);
+
+
+                //the angle is calculated by an adaptation of the solution from DMGregory at https://gamedev.stackexchange.com/questions/147409/rotate-from-current-rotation-to-another-using-angular-velocity (15.04.2024)
+                float angle; Vector3 axis;
+                delta.ToAngleAxis(out angle, out axis);
+                // We get an infinite axis in the event that our rotation is already aligned.
+                if (!float.IsInfinity(axis.x))
+                {
+                    if (angle > 180f)
+                        angle -= 360f;
+
+                    //Goal orientated version
+                    wantedAngularVelChange = (0.98f * angle * Mathf.Deg2Rad / timeToContact) * axis.normalized;
+                    wantedAngularVelChange = new Vector3(wantedAngularVelChange.x, 0, wantedAngularVelChange.z);
+                }
+                else
+                {
+                    Debug.Log("axis is infinity (should propably not)");
+                }
+
+                if (doInstantCorrection && timeToContact > 0.7f)
+                {
+                    rb.angularVelocity += wantedAngularVelChange; // instant rotation speed change when leaving ground
+                }
+                else if (timeInAir >= minFlightDurationForCorrection)
+                {
+                    float angularChangeLimitScale = wantedAngularVelChange.magnitude > maxAngularVelCorrectionInAir * Time.fixedDeltaTime ? maxAngularVelCorrectionInAir * Time.fixedDeltaTime / wantedAngularVelChange.magnitude : 1;
+                    rb.angularVelocity += wantedAngularVelChange * angularChangeLimitScale; // continiouse rotation speed change in the air, limited by maxAngularVelCorrectionInAir.
+                }
+            }
+        }
+    }
+
+    private void ComputeGroundAndAirStatus()
+    {
+        if (numberOfGroundedWheels > 0)
+        {
+            lastContactWithGround = 0;
+            timeInAir = 0;
+            triggeredGroundLeftAlready = false;
+            justLeftGround = false;
+        }
+        else
+        {
+            lastContactWithGround += Time.fixedDeltaTime;
+        }
+        if (lastContactWithGround > Time.fixedDeltaTime * 4)
+        {
+            timeInAir += Time.fixedDeltaTime;
+            if (!triggeredGroundLeftAlready)
+            {
+                justLeftGround = true;
+                triggeredGroundLeftAlready = true;
+            }
+            else
+            {
+                justLeftGround = false;
+            }
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (((1 << collision.gameObject.layer) & combinedGroundLayers) != 0)
+        {
+            lastContactWithGround = 0;
+            timeInAir = 0;
+            triggeredGroundLeftAlready = false;
+            justLeftGround = false;
+        }
+    }
 }
 
 

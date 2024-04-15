@@ -1,3 +1,4 @@
+using Cinemachine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,6 +12,10 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] private float camFollowSpeed = 10;
     [SerializeField] private float camFleeSpeed = 12;
 
+    Rigidbody rb;
+    CinemachineVirtualCamera cam;
+    CustomGravityReciver customGravity;
+    float prevZRot = 0;
     //private Quaternion previousCameraRotation;
 
 
@@ -18,6 +23,13 @@ public class CameraFollow : MonoBehaviour
     {
         //player = GameObject.FindGameObjectWithTag("Player").transform;
         //cameraPreRot = transform.rotation;
+    }
+
+    private void Start()
+    {
+        rb = player.GetComponent<Rigidbody>();
+        customGravity = player.GetComponent<CustomGravityReciver>();
+        cam = GetComponent<CinemachineVirtualCamera>();
     }
 
     private void Update()
@@ -53,13 +65,45 @@ public class CameraFollow : MonoBehaviour
         }
 
         //Debug.Log("cam Update3");
+        Vector3 gravity = customGravity != null ? customGravity.CurrentCustomGravity : Physics.gravity;
 
+        float currentLocalY = Vector3.Dot(camToCar, gravity.normalized);
 
-        float camHeight = Mathf.Lerp(player.position.y + yDistToPlayer, transform.position.y, Mathf.Pow(0.2f, Time.deltaTime));//reaches 80% of plannedHeight over 1 second
-        transform.position = new Vector3(transform.position.x, camHeight, transform.position.z);
+        float updatedLocalY = Mathf.Lerp(yDistToPlayer, currentLocalY, Mathf.Pow(0.65f, Time.deltaTime));//reaches 35% of plannedHeight over 1 second
+
+        Vector3 posWithZeroLocalY = transform.position + currentLocalY * gravity;
+        transform.position = posWithZeroLocalY - updatedLocalY * gravity;
+        //transform.position = new Vector3(transform.position.x, updatedLocalY, transform.position.z);
 
         //Debug.Log("cam Update4");
 
+       
+
+
+
+
+        float wantedZRot = Quaternion.LookRotation(camToCar, -gravity).eulerAngles.z;
+        if (wantedZRot > 180) wantedZRot -= 360;
+        else if (wantedZRot < -180) wantedZRot += 360;
+
+        if (wantedZRot > 90 && prevZRot < -90)
+        {
+            prevZRot += 360;
+        }
+        else if (wantedZRot < -90 && prevZRot > 90)
+        {
+            prevZRot -= 360;
+        }
+        float updatedRot = Mathf.Lerp(wantedZRot, prevZRot, Mathf.Pow(0.35f, Time.deltaTime));//reaches 65% of wantedZRot over 1 second;
+        cam.m_Lens.Dutch = updatedRot > 180 ? updatedRot - 360 : updatedRot < -180 ? updatedRot + 360 : updatedRot;
+        prevZRot = updatedRot;
+
+
+
+        //adapt FOV
+        float horzSpeed = new Vector2(rb.velocity.x, rb.velocity.z).magnitude;
+        float plannedFOVwidth = horzSpeed < 2 ? 45 : 45 + (Mathf.Sqrt(horzSpeed - 2) * 5);
+        cam.m_Lens.FieldOfView = plannedFOVwidth;
     }
 
 

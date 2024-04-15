@@ -59,15 +59,16 @@ public class CarEditor : Editor
     //breaking Settings
     SerializedProperty breakMaxSlowdown;
     SerializedProperty breakAppliedToFrontWheels;
-    //SerializedProperty breakAppliedToRearWheels;
     SerializedProperty breakRestrainToOptimiseGrip;
+    SerializedProperty breakLimitedByGrip;
     SerializedProperty handBreakMaxSlowdown;
     SerializedProperty handBreakAppliedToFrontWheels;
-    //SerializedProperty handBreakAppliedToRearWheels;
     SerializedProperty handBreakRestrainToOptimiseGrip;
+    SerializedProperty handBreakLimitedByGrip;
+
 
     //physical wheel-position and spring settings
-    SerializedProperty showFrontWheelSettings;
+    SerializedProperty showWheelSettings;
     SerializedProperty frontRightWheelCenter;
     SerializedProperty frontWheelRadius;
     SerializedProperty frontWheelRotationHoldsRatioOfSpeed;
@@ -76,9 +77,8 @@ public class CarEditor : Editor
     SerializedProperty frontWheelOutwardThickness;
     SerializedProperty frontWheelShapeAccuracy;
     SerializedProperty frontSuspDist;
-    SerializedProperty frontDamping;
     SerializedProperty frontSuspHardCap;
-    SerializedProperty showRearWheelSettings;
+    //SerializedProperty showRearWheelSettings;
     SerializedProperty rearRightWheelCenter;
     SerializedProperty rearWheelRadius;
     SerializedProperty rearWheelRotationHoldsRatioOfSpeed;
@@ -87,18 +87,26 @@ public class CarEditor : Editor
     SerializedProperty rearWheelOutwardThickness;
     SerializedProperty rearWheelShapeAccuracy;
     SerializedProperty rearSuspDist;
-    SerializedProperty rearDamping;
     SerializedProperty rearSuspHardCap;
 
     SerializedProperty springsByDefaultGravity;
     SerializedProperty springsByOtherValue;
+
+    //balance
+    SerializedProperty damping;
+    SerializedProperty antiJumpSuspension;
     SerializedProperty lateralAttackHeightLift;
     SerializedProperty longitudalAttackHeightLift;
     SerializedProperty frontAntiRollBar;
     SerializedProperty rearAntiRollBar;
-
     SerializedProperty solidGroundLayer;
     SerializedProperty looseGroundLayer;
+    SerializedProperty TurnUpwardsWithZeroWheels;
+    SerializedProperty TurnUpwardsWithOneOrTwoWheels;
+    SerializedProperty TurnUpwardsWithThreeOrFourWheels;
+    SerializedProperty minFlightDurationForCorrection;
+    SerializedProperty maxAngularVelCorrectionInAir;
+    SerializedProperty fixFlightRotationAtLeavingGround;
 
 
     SerializedProperty scaleGripWithSpringCompression;
@@ -141,6 +149,11 @@ public class CarEditor : Editor
     SerializedProperty maxFrontAngleTowardsSlide;
     SerializedProperty rearSteerTowardsSlide;
     SerializedProperty maxRearAngleTowardsSlide;
+    //Arcady Steer
+    SerializedProperty disableNaturalSteering;
+    SerializedProperty maxAnglesPSChangeFromArcadySteering;
+    //Air Steer
+    SerializedProperty maxAnglesPSChangeAtAirSteering;
 
     //input
     SerializedProperty breakAtOtherDirectionInput; 
@@ -185,8 +198,7 @@ public class CarEditor : Editor
     bool showAccelerationSettings = false;
     bool showGearSettings = false;
     bool showBreakSettings = false;
-    bool showHandBreakSettings = false;
-    bool showDecelerationSettings = false;
+    bool showBalanceSettings = false;
 
 
 
@@ -229,11 +241,13 @@ public class CarEditor : Editor
         breakMaxSlowdown = serializedObject.FindProperty("breakMaxSlowdown");
         breakAppliedToFrontWheels = serializedObject.FindProperty("breakAppliedToFrontWheels");
         breakRestrainToOptimiseGrip = serializedObject.FindProperty("breakRestrainToOptimiseGrip");
+        breakLimitedByGrip = serializedObject.FindProperty("breakLimitedByGrip");
         handBreakMaxSlowdown = serializedObject.FindProperty("handBreakMaxSlowdown");
         handBreakAppliedToFrontWheels = serializedObject.FindProperty("handBreakAppliedToFrontWheels");
         handBreakRestrainToOptimiseGrip = serializedObject.FindProperty("handBreakRestrainToOptimiseGrip");
+        handBreakLimitedByGrip = serializedObject.FindProperty("handBreakLimitedByGrip");
         //front wheel physical position and spring settings
-        showFrontWheelSettings = serializedObject.FindProperty("showFrontWheelSettings");
+        showWheelSettings = serializedObject.FindProperty("showWheelSettings");
         frontRightWheelCenter = serializedObject.FindProperty("frontRightWheelCenter");
         frontWheelRadius = serializedObject.FindProperty("frontWheelRadius");
         frontWheelRotationHoldsRatioOfSpeed = serializedObject.FindProperty("frontWheelRotationHoldsRatioOfSpeed");
@@ -242,10 +256,8 @@ public class CarEditor : Editor
         frontWheelOutwardThickness = serializedObject.FindProperty("frontWheelOutwardThickness");
         frontWheelShapeAccuracy = serializedObject.FindProperty("frontWheelShapeAccuracy");
         frontSuspDist = serializedObject.FindProperty("frontWheelSuspensionDistanceToLiftCarWeight");
-        frontDamping = serializedObject.FindProperty("frontWheelDamping");
         frontSuspHardCap = serializedObject.FindProperty("frontSuspHardCap");
         //rear wheel physical position and spring settings
-        showRearWheelSettings = serializedObject.FindProperty("showRearWheelSettings");
         rearRightWheelCenter = serializedObject.FindProperty("rearRightWheelCenter");
         rearWheelRadius = serializedObject.FindProperty("rearWheelRadius");
         rearWheelRotationHoldsRatioOfSpeed = serializedObject.FindProperty("rearWheelRotationHoldsRatioOfSpeed");
@@ -254,13 +266,21 @@ public class CarEditor : Editor
         rearWheelOutwardThickness = serializedObject.FindProperty("rearWheelOutwardThickness");
         rearWheelShapeAccuracy = serializedObject.FindProperty("rearWheelShapeAccuracy");
         rearSuspDist = serializedObject.FindProperty("rearWheelSuspensionDistanceToLiftCarWeight");
-        rearDamping = serializedObject.FindProperty("rearWheelDamping");
         rearSuspHardCap = serializedObject.FindProperty("rearSuspHardCap");
         //spring context
         springsByDefaultGravity = serializedObject.FindProperty("springsByDefaultGravity");
         springsByOtherValue = serializedObject.FindProperty("springsByOtherValue");
         lateralAttackHeightLift  = serializedObject.FindProperty("lateralAttackHeightLift");
         longitudalAttackHeightLift = serializedObject.FindProperty("longitudalAttackHeightLift");
+        //balance
+        damping = serializedObject.FindProperty("damping");
+        antiJumpSuspension = serializedObject.FindProperty("antiJumpSuspension");
+        TurnUpwardsWithZeroWheels = serializedObject.FindProperty("TurnUpwardsWithZeroWheels");
+        TurnUpwardsWithOneOrTwoWheels = serializedObject.FindProperty("TurnUpwardsWithOneOrTwoWheels");
+        TurnUpwardsWithThreeOrFourWheels = serializedObject.FindProperty("TurnUpwardsWithThreeOrFourWheels");
+        minFlightDurationForCorrection = serializedObject.FindProperty("minFlightDurationForCorrection");
+        maxAngularVelCorrectionInAir = serializedObject.FindProperty("maxAngularVelCorrectionInAir");
+        fixFlightRotationAtLeavingGround = serializedObject.FindProperty("fixFlightRotationAtLeavingGround");
         //anti roll bar
         frontAntiRollBar = serializedObject.FindProperty("frontAntiRollBar");
         rearAntiRollBar = serializedObject.FindProperty("rearAntiRollBar");
@@ -301,6 +321,11 @@ public class CarEditor : Editor
         maxFrontAngleTowardsSlide = serializedObject.FindProperty("maxFrontAngleTowardsSlide");
         rearSteerTowardsSlide = serializedObject.FindProperty("rearSteerTowardsSlide");
         maxRearAngleTowardsSlide = serializedObject.FindProperty("maxRearAngleTowardsSlide");
+        //arcady steering
+        disableNaturalSteering = serializedObject.FindProperty("disableNaturalSteering");
+        maxAnglesPSChangeFromArcadySteering = serializedObject.FindProperty("maxAnglesPSChangeAtArcadySteering");
+        //air steering
+        maxAnglesPSChangeAtAirSteering = serializedObject.FindProperty("maxAnglesPSChangeAtAirSteering");
 
         //input secttion
         breakAtOtherDirectionInput = serializedObject.FindProperty("breakAtOtherDirectionInput");
@@ -505,34 +530,29 @@ public class CarEditor : Editor
         GUILayout.Space(10);
 
 
-        //BREAK
+        //Deceleration
         DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showBreakSettings = EditorGUILayout.Foldout(showBreakSettings, "Break");
+        showBreakSettings = EditorGUILayout.Foldout(showBreakSettings, "Deceleration");
         if (showBreakSettings)
         {
+            //braking
+            EditorGUILayout.LabelField("Braking", EditorStyles.miniBoldLabel);
             breakMaxSlowdown.floatValue = EditorGUILayout.FloatField("break deceleration", breakMaxSlowdown.floatValue);
             DrawRearFrontSlider(ref breakAppliedToFrontWheels);
             breakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", breakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
-        }
-        GUILayout.Space(10);
+            breakLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Breake limited by Grip", breakLimitedByGrip.floatValue * 100, 0, 100) / 100;
+            GUILayout.Space(10);
 
-        //HANDBREAK
-        DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showHandBreakSettings = EditorGUILayout.Foldout(showHandBreakSettings, "Handbreak");
-        if (showHandBreakSettings)
-        {
+            //handbrake
+            EditorGUILayout.LabelField("Handbreak", EditorStyles.miniBoldLabel);
             handBreakMaxSlowdown.floatValue = EditorGUILayout.FloatField("handbreak deceleration", handBreakMaxSlowdown.floatValue);
             DrawRearFrontSlider(ref handBreakAppliedToFrontWheels);
             handBreakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", handBreakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
-        }
-        GUILayout.Space(10);
+            handBreakLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Breake limited by Grip", handBreakLimitedByGrip.floatValue * 100, 0, 100) / 100;
+            GUILayout.Space(10);
 
-        //DECELERATION
-        DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showDecelerationSettings = EditorGUILayout.Foldout(showDecelerationSettings, "Deceleration");
-        if (showDecelerationSettings)
-        {
-            //air Resistance
+            //Permanent deceleration factors
+            EditorGUILayout.LabelField("Permanent deceleration factors", EditorStyles.miniBoldLabel);
             EditorGUILayout.BeginHorizontal();
             {
                 GUILayout.FlexibleSpace();
@@ -545,7 +565,7 @@ public class CarEditor : Editor
                 GUILayout.FlexibleSpace();
             }
             EditorGUILayout.EndHorizontal();
-            //Tooltip
+            // (This is just a Tooltip to explain the air resistence)
             slowByAirResistanceAt30ms.floatValue = pickedAirSlowdownAtOrientation * Mathf.Pow(30, airResistanceExponent.floatValue) / Mathf.Pow(pickedOrientationAirSlowdowm, airResistanceExponent.floatValue);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "The Slowdown from Air Resistance rises by the exponent of "+airResistanceExponent.floatValue+" with speed. " +
                 "With you current Settings the Air Resistance slows the car by" + Environment.NewLine
@@ -565,19 +585,19 @@ public class CarEditor : Editor
 
         //front wheel Position and Spring Settings
         DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showFrontWheelSettings.boolValue = EditorGUILayout.Foldout(showFrontWheelSettings.boolValue, "Front Wheel Settings");
-        if (showFrontWheelSettings.boolValue)
+        showWheelSettings.boolValue = EditorGUILayout.Foldout(showWheelSettings.boolValue, "Wheels & Suspension");
+        if (showWheelSettings.boolValue)
         {
+            //front wheels & suspension
+            EditorGUILayout.LabelField("Front Wheels", EditorStyles.miniBoldLabel);
             EditorGUI.indentLevel++;
             frontRightWheelCenter.vector3Value  = EditorGUILayout.Vector3Field("PositionR", frontRightWheelCenter.vector3Value);
             frontWheelRadius.floatValue         = EditorGUILayout.FloatField("Radius", frontWheelRadius.floatValue);
-            frontWheelRotationHoldsRatioOfSpeed.floatValue = EditorGUILayout.Slider("Holds energetic Ratio of Speed as Rotation", frontWheelRotationHoldsRatioOfSpeed.floatValue * 100f, 0, 15)/100f;
+            frontWheelRotationHoldsRatioOfSpeed.floatValue = EditorGUILayout.Slider("Holds energetic Ratio of Speed as Rotation", frontWheelRotationHoldsRatioOfSpeed.floatValue * 100f, 1, 15)/100f;
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "% of the kinectic energy used to rotate one front wheel. When a Car moves foward, not all kinetic energy is foward movement. Each wheel stores around 2.5% of the car's total kinetic energy as rotation. Overproportial wheels like thouse of monstertrucks can take up to 15% of the vehicle's total kinetic energy each." +
                 " Why is this Ratio relevant? Example: If wheels spin very fast in the air and the car hits the ground again, excess wheel speed is converted into foward movement accordingly. Low Ratios on the other hand use less of the motor power to adapt the current wheel spin"));
             frontSuspDist.floatValue            = EditorGUILayout.FloatField("Loose Spring Range", frontSuspDist.floatValue);
-            frontDamping.floatValue             = EditorGUILayout.Slider("Damping", frontDamping.floatValue, 0, 10);
             frontSuspHardCap.floatValue         = EditorGUILayout.FloatField("Upward Suspension Stop", frontSuspHardCap.floatValue);
-
 
             var oldColor = GUI.backgroundColor;
             EditorGUILayout.BeginHorizontal();
@@ -603,28 +623,19 @@ public class CarEditor : Editor
 
             }
             GUI.backgroundColor = oldColor;
-            EditorGUI.indentLevel--;
+            GUILayout.Space(5);
 
-        }
-        GUILayout.Space(5);
-
-        //rear wheel Position and Spring Settings
-        //GUI.DrawTexture(new Rect(0, sectionHeights[sectionCount], Screen.width, sectionHeights[++sectionCount] - sectionHeights[sectionCount-1]), GetAlternatingBackgroundTex(sectionCount), ScaleMode.StretchToFill);
-        DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showRearWheelSettings.boolValue = EditorGUILayout.Foldout(showRearWheelSettings.boolValue, "Rear Wheel Settings");
-        if (showRearWheelSettings.boolValue)
-        {
-            EditorGUI.indentLevel++;
+            //rear wheels & suspension
+            EditorGUILayout.LabelField("Rear Wheels", EditorStyles.miniBoldLabel);
             rearRightWheelCenter.vector3Value = EditorGUILayout.Vector3Field("PositionR", rearRightWheelCenter.vector3Value);
             rearWheelRadius.floatValue = EditorGUILayout.FloatField("Radius", rearWheelRadius.floatValue);
-            rearWheelRotationHoldsRatioOfSpeed.floatValue = EditorGUILayout.Slider("Holds energetic Ratio of Speed as Rotation", rearWheelRotationHoldsRatioOfSpeed.floatValue * 100f, 0, 15) / 100f;
+            rearWheelRotationHoldsRatioOfSpeed.floatValue = EditorGUILayout.Slider("Holds energetic Ratio of Speed as Rotation", rearWheelRotationHoldsRatioOfSpeed.floatValue * 100f, 1, 15) / 100f;
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "% of the kinectic energy used to rotate one rear wheel. When a Car moves foward, not all kinetic energy is foward movement. Each wheel stores around 2.5% of the car's total kinetic energy as rotation. Overproportial wheels like thouse of monstertrucks can take up to 15% of the vehicle's total kinetic energy each." +
                 " Why is this Ratio relevant? Example: If wheels spin very fast in the air and the car hits the ground again, excess wheel speed is converted into foward movement accordingly. Low Ratios on the other hand use less of the motor power to adapt the current wheel spin"));
             rearSuspDist.floatValue = EditorGUILayout.FloatField("Loose Spring Range", rearSuspDist.floatValue);
-            rearDamping.floatValue=  EditorGUILayout.Slider("Damping", rearDamping.floatValue, 0, 10);
+            //rearDamping.floatValue=  EditorGUILayout.Slider("Damping", rearDamping.floatValue, 0, 10);
             rearSuspHardCap.floatValue = EditorGUILayout.FloatField("Upward Suspension Stop", rearSuspHardCap.floatValue);
 
-            var oldColor = GUI.backgroundColor;
             EditorGUILayout.BeginHorizontal();
             {
                 GUILayout.Label("", GUILayout.Width(10));
@@ -650,51 +661,68 @@ public class CarEditor : Editor
             GUI.backgroundColor = oldColor;
             EditorGUI.indentLevel--;
 
+            GUILayout.Space(15);
+
+            //DrawNextSectionAndClosePreviouse(ref sectionCount);
+            GUILayout.Label("For which Gravity did you adjust the Suspension Springs?", new GUIStyle(EditorStyles.centeredGreyMiniLabel));
+            var previousColor = GUI.backgroundColor;
+            EditorGUILayout.BeginHorizontal();
+            {
+                if (springsByDefaultGravity.boolValue) GUI.backgroundColor = colorForPerformance;
+                bool switchToDefaultGravity = GUILayout.Button("Szene Default Gravity");
+                if (switchToDefaultGravity) springsByDefaultGravity.boolValue = true;
+                GUI.backgroundColor = springsByDefaultGravity.boolValue ? previousColor : colorForPerformance;
+                bool switchToCustomGravity = GUILayout.Button("Custom Gravity Value");
+                if (switchToCustomGravity) springsByDefaultGravity.boolValue = false;
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUI.indentLevel++;
+            EditorGUILayout.BeginHorizontal();
+            {
+                GUILayout.FlexibleSpace();
+                if (springsByDefaultGravity.boolValue)
+                {
+                    EditorGUILayout.LabelField("Answer: I Adjusted Spings for " + Physics.gravity.magnitude + "m/s^2 Gravity", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(320));
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Answer: I Adjusted Spings for", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(160));
+                    springsByOtherValue.floatValue = EditorGUILayout.FloatField("", springsByOtherValue.floatValue, GUILayout.MaxWidth(65));
+                    EditorGUILayout.LabelField("m/s^2 Gravity", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(80));
+                }
+                GUILayout.FlexibleSpace();
+            }
+            EditorGUILayout.EndHorizontal();
+            GUI.backgroundColor = previousColor;
+            EditorGUI.indentLevel--;
         }
+        
         GUILayout.Space(10);
 
+
+        //BALANCE
         DrawNextSectionAndClosePreviouse(ref sectionCount);
-        GUILayout.Label("For which Gravity did you adjust the Suspension Springs?", new GUIStyle(EditorStyles.centeredGreyMiniLabel));
-        var previousColor = GUI.backgroundColor;
-        EditorGUILayout.BeginHorizontal();
-        { 
-            if (springsByDefaultGravity.boolValue) GUI.backgroundColor = colorForPerformance;
-            bool switchToDefaultGravity = GUILayout.Button("Szene Default Gravity");
-            if (switchToDefaultGravity) springsByDefaultGravity.boolValue = true;
-            GUI.backgroundColor = springsByDefaultGravity.boolValue ? previousColor : colorForPerformance;
-            bool switchToCustomGravity = GUILayout.Button("Custom Gravity Value");
-            if (switchToCustomGravity) springsByDefaultGravity.boolValue = false;
-        }
-        EditorGUILayout.EndHorizontal();
-        EditorGUI.indentLevel++;
-        EditorGUILayout.BeginHorizontal();
+        showBalanceSettings = EditorGUILayout.Foldout(showBalanceSettings, "Balance");
+        if (showBalanceSettings)
         {
-            GUILayout.FlexibleSpace();
-            if (springsByDefaultGravity.boolValue)
-            {
-                EditorGUILayout.LabelField("Answer: I Adjusted Spings for " + Physics.gravity.magnitude + "m/s^2 Gravity", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(320));
-            }
-            else
-            {
-                EditorGUILayout.LabelField("Answer: I Adjusted Spings for", new GUIStyle(EditorStyles.helpBox), GUILayout.MaxWidth(160));
-                springsByOtherValue.floatValue = EditorGUILayout.FloatField("", springsByOtherValue.floatValue, GUILayout.MaxWidth(65));
-                EditorGUILayout.LabelField("m/s^2 Gravity", new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleLeft }, GUILayout.MaxWidth(80));
-            }
-            GUILayout.FlexibleSpace();
+            damping.floatValue = EditorGUILayout.Slider("Damping", damping.floatValue, 0, 10);
+            antiJumpSuspension.floatValue = EditorGUILayout.Slider("(%) Anti-Jump Suspension", antiJumpSuspension.floatValue * 100, 0, 100) / 100;
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "When a wheel drives fast over a bump it might throw the car upwards on that side. With anti-jump-suspension a spring looses % of its power, while the car is already moving upward on that local position, preventing that behaviour"));
+            frontAntiRollBar.floatValue = EditorGUILayout.Slider("(%) Front Anti-Roll Bar", frontAntiRollBar.floatValue * 100, 0, 100) / 100;
+            rearAntiRollBar.floatValue = EditorGUILayout.Slider("(%) Rear Anti-Roll Bar", rearAntiRollBar.floatValue * 100, 0, 100) / 100;
+            lateralAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift lateral-attackpoint", lateralAttackHeightLift.floatValue * 100, 0, 100) / 100;
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where sideward grip applies force at ground height (potentionally flipping the car sideward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height")); //tooltip to previous https://www.reddit.com/r/Unity3D/comments/45bjwc/tooltip_on_custom_inspectorproperties/ by againey
+            longitudalAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift longitudal-attackpoint", longitudalAttackHeightLift.floatValue * 100, 0, 100) / 100;
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where grip of accelerating and breaking applies force at ground height (potentionally flipping the car foward/backward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height"));
+            GUILayout.Label("Define how/if the car turns up again when it landed bad", new GUIStyle(EditorStyles.centeredGreyMiniLabel));
+            EditorGUILayout.PropertyField(TurnUpwardsWithZeroWheels);
+            EditorGUILayout.PropertyField(TurnUpwardsWithOneOrTwoWheels);
+            EditorGUILayout.PropertyField(TurnUpwardsWithThreeOrFourWheels);
+            EditorGUILayout.LabelField("Correct Air Rotation to land straigth:", EditorStyles.miniBoldLabel);
+            minFlightDurationForCorrection.floatValue = EditorGUILayout.FloatField("(s) Start Correction after flight Duration:", minFlightDurationForCorrection.floatValue);
+            maxAngularVelCorrectionInAir.floatValue = EditorGUILayout.FloatField("(°/s^2) Max Rotation speed change:", maxAngularVelCorrectionInAir.floatValue);
+            EditorGUILayout.PropertyField(fixFlightRotationAtLeavingGround);
         }
-        EditorGUILayout.EndHorizontal();
-        GUI.backgroundColor = previousColor;
-        EditorGUI.indentLevel--;
-        GUILayout.Space(10);
-
-        //ATTACKPOINTS
-        DrawNextSectionAndClosePreviouse(ref sectionCount);
-        lateralAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift lateral-attackpoint", lateralAttackHeightLift.floatValue*100, 0, 100)/100;
-        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where sideward grip applies force at ground height (potentionally flipping the car sideward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height")); //tooltip to previous https://www.reddit.com/r/Unity3D/comments/45bjwc/tooltip_on_custom_inspectorproperties/ by againey
-        longitudalAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift longitudal-attackpoint", longitudalAttackHeightLift.floatValue * 100, 0, 100) / 100;
-        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where grip of accelerating and breaking applies force at ground height (potentionally flipping the car foward/backward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height"));
-        frontAntiRollBar.floatValue = EditorGUILayout.Slider("(%) Front Anti-Roll Bar", frontAntiRollBar.floatValue * 100, 0, 100) / 100;
-        rearAntiRollBar.floatValue = EditorGUILayout.Slider("(%) Rear Anti-Roll Bar", rearAntiRollBar.floatValue * 100, 0, 100) / 100;
         GUILayout.Space(15);
 
         //GRIP - NORMAL FORCE RELATION
@@ -857,7 +885,7 @@ public class CarEditor : Editor
         //STEERING SETTINGS
         DrawNextSectionAndClosePreviouse(ref sectionCount);
         EditorGUILayout.LabelField("Steering Settings", EditorStyles.boldLabel);
-        ackermanSteering.floatValue = EditorGUILayout.Slider("(%) Ackerman Steering", ackermanSteering.floatValue * 100, 0, 100) / 100;
+        ackermanSteering.floatValue = EditorGUILayout.Slider("(%) Ackerman Steering", ackermanSteering.floatValue * 100, -100, 100) / 100;
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "ackerman schmackermann!"));
         maxSteerChangePerSecond.floatValue = EditorGUILayout.Slider("(%/s) Steering Change Per Second", maxSteerChangePerSecond.floatValue * 100, 0, 2000) / 100;
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "The steering angle is always changed continiously. With this variable on 1000%-Change-Per-Second it takes 0.1 Seconds of Steering-Input to change the Wheels from a neutral state (0°) to the maximum Steering Angle"));
@@ -885,6 +913,19 @@ public class CarEditor : Editor
         maxFrontAngleTowardsSlide.floatValue = EditorGUILayout.FloatField("(°) fw Max Steer Towards Slide", maxFrontAngleTowardsSlide.floatValue);
         rearSteerTowardsSlide.floatValue = EditorGUILayout.Slider("(%) rw Steer Towards Slide", rearSteerTowardsSlide.floatValue * 100, 0, 100) / 100;
         maxRearAngleTowardsSlide.floatValue = EditorGUILayout.FloatField("(°) rw Max Steer Towards Slide", maxRearAngleTowardsSlide.floatValue);
+        //Arcady Steering
+        EditorGUILayout.LabelField("Arcady Steering", EditorStyles.miniBoldLabel);
+        disableNaturalSteering.floatValue = EditorGUILayout.Slider("(%) Disable natural Steering", disableNaturalSteering.floatValue * 100, 0, 100) / 100;
+        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "It is possible to replace the steering with arcady steering here. " +
+            "By disableing the natural steering, you can remove the impact on angular velocity, which would result from grip at the wheels' contact points."));
+        maxAnglesPSChangeFromArcadySteering.floatValue = EditorGUILayout.FloatField("(°/s^2) Arcady angular acceleration", maxAnglesPSChangeFromArcadySteering.floatValue);
+        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "This variable defines how fast the angular velocity can change per second on the ground to match the wanted angular velocity." +
+            " This wanted Angular velocity is defined by your current speed divided by the theoretical length of the ground-turning-cicle, which results from your current steer. Note that this is no directly natural behaviour and is therefore called arcady"));
+        //Air Steering
+        EditorGUILayout.LabelField("Air Steering", EditorStyles.miniBoldLabel);
+        maxAnglesPSChangeAtAirSteering.floatValue = EditorGUILayout.FloatField("(°/s^2) Angular acceleration in Air", maxAnglesPSChangeAtAirSteering.floatValue);
+        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "This variable defines how fast the angular velocity can change per second in the air to match the wanted angular velocity." +
+            " This wanted Angular velocity is defined by your current speed divided by the theoretical length of the ground-turning-cicle, which results from your current steer."));
         GUILayout.Space(15);
         //if (isRepainting) sectionHeights[sectionCount] = GUILayoutUtility.GetLastRect().yMax;
 
@@ -969,9 +1010,9 @@ public class CarEditor : Editor
 
         //Gizmo Visualisation
         //carGizmos.VisualiseWheels(frontRightWheelCenter.vector3Value, rearRightWheelCenter.vector3Value, frontWheelRadius.floatValue, rearWheelRadius.floatValue, frontSuspDist.floatValue, rearSuspDist.floatValue);
-        carGizmos.VisualiseWheels(showFrontWheelSettings.boolValue, frontRightWheelCenter.vector3Value, frontSuspDist.floatValue, frontWheelRadius.floatValue, frontSuspHardCap.floatValue,
+        carGizmos.VisualiseWheels(showWheelSettings.boolValue, frontRightWheelCenter.vector3Value, frontSuspDist.floatValue, frontWheelRadius.floatValue, frontSuspHardCap.floatValue,
                                   frontUse3DWheelPhysics.boolValue, frontWheelInwardThickness.floatValue, frontWheelOutwardThickness.floatValue,
-                                  showRearWheelSettings.boolValue, rearRightWheelCenter.vector3Value, rearSuspDist.floatValue, rearWheelRadius.floatValue, rearSuspHardCap.floatValue,
+                                  showWheelSettings.boolValue, rearRightWheelCenter.vector3Value, rearSuspDist.floatValue, rearWheelRadius.floatValue, rearSuspHardCap.floatValue,
                                   rearUse3DWheelPhysics.boolValue, rearWheelInwardThickness.floatValue, rearWheelOutwardThickness.floatValue);
 
 
