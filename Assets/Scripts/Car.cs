@@ -192,6 +192,7 @@ public class Car : MonoBehaviour
     //Visualisation
     public Transform[] visualWheels = new Transform[4];
     [SerializeField] bool[] placeOnPhysicalWheel = new bool[] { false, false, false, false };
+    [SerializeField] Transform visualDebugCar;
 
 
     //public Vector3 FrontRightWheelCenter { get => frontRightWheelCenter;}
@@ -228,6 +229,7 @@ public class Car : MonoBehaviour
 
     //Dependent Parameters
     Rigidbody rb;
+    CustomGravityReciver gravityReciver;
     
 
     //float frontSpringPower = 0;
@@ -293,11 +295,17 @@ public class Car : MonoBehaviour
         if (sliderToShowClutch != null) guiSliderForClutch = sliderToShowClutch.GetComponent<UnityEngine.UI.Slider>();
         if (guiGear != null) guiGearTextMeshPro = guiGear.GetComponent<TextMeshProUGUI>();
         if (guiSpeed != null) guiSpeedTextMeshPro = guiSpeed.GetComponent<TextMeshProUGUI>();
+
+
+        //Test!!!!!!!!!
+        rb.angularVelocity = new Vector3 (1,0,0);
+
     }
 
     public void UpdateDependendParameters() //Note: This Method is also called when you make changes in Inspector during play mode
     {
         rb = GetComponent<Rigidbody>();
+        gravityReciver = GetComponent<CustomGravityReciver>();
         usedGravityForSprings = springsByDefaultGravity ? Physics.gravity.magnitude : Mathf.Abs(springsByOtherValue);
         float distCenterFrontWheel = Mathf.Abs(frontRightWheelCenter.z - rb.centerOfMass.z);
         float distCenterRearWheel = Mathf.Abs(rearRightWheelCenter.z - rb.centerOfMass.z);
@@ -2221,19 +2229,45 @@ public class Car : MonoBehaviour
 
         float timeStepDuration = 0.05f; //predicted time per ray in seconds
         int numberOfTimesteps = doInstantCorrection ? 300 : 30; // 300 * 0.05s = 15s predicted duration at leaving ground and 25*0.05s = 1.5s predicted duration in Air
-        Vector3[] v0 = new Vector3[numberOfTimesteps + 1];
+        Vector3[] flightPositions = new Vector3[numberOfTimesteps + 1];
         Vector3[,] dotCurves = new Vector3[3, numberOfTimesteps + 1]; //It will contain three "curves", each represented by a row of points.
                                                                       // The points will be connected by raycasts to form the curve and check where the curve collides with terrain.
         Vector3[] hitPos = new Vector3[3];
         float[] hitT = new float[3]; //a curve represents the car's predicted movement. "hitT[curveIndex]" saves the estimated time from each curve to hit terrain.
         Quaternion[] moveDirRotAtIndex = new Quaternion[numberOfTimesteps + 1];
+        float[] speedAtTimestep = new float[numberOfTimesteps + 1];
 
-        for (int i = 0; i <= numberOfTimesteps; i++)
+        if(gravityReciver != null)   //gravityReciver != null)
         {
-            moveDirRotAtIndex[i] = Quaternion.LookRotation(rb.velocity + i * timeStepDuration * Physics.gravity, Vector3.up);
-            v0[i] = startingCenter + rb.velocity * (float)i * timeStepDuration + 0.5f * Physics.gravity * (float)i * (float)i * timeStepDuration * timeStepDuration;
-            if (i > 0) Debug.DrawLine(v0[i - 1], v0[i], Color.black, Time.fixedDeltaTime);
+            //i=0 is calculated outside loop
+            moveDirRotAtIndex[0] = Quaternion.LookRotation(rb.velocity, Vector3.up);
+            flightPositions[0] = startingCenter;
+            Vector3 velocityAtPrevTimestep = rb.velocity; //+ gravityReciver.GetGravityForPosition(v0[0]) * 0.5f;
+            speedAtTimestep[0] = velocityAtPrevTimestep.magnitude;
+
+            for (int i = 1; i <= numberOfTimesteps; i++)
+            {
+                Vector3 gravityAtPrevPoint = gravityReciver.GetGravityForPosition(flightPositions[i - 1]);
+                moveDirRotAtIndex[i] = Quaternion.LookRotation(velocityAtPrevTimestep, -gravityAtPrevPoint);
+                flightPositions[i] = flightPositions[i - 1] + velocityAtPrevTimestep * timeStepDuration + 0.5f * gravityAtPrevPoint * timeStepDuration * timeStepDuration;
+                Debug.DrawLine(flightPositions[i - 1], flightPositions[i], Color.black, Time.fixedDeltaTime);
+
+                velocityAtPrevTimestep += gravityAtPrevPoint * timeStepDuration;
+                speedAtTimestep[i] = velocityAtPrevTimestep.magnitude; //velocityAtPrevTimestep is the velocity of the current timestep already here
+            }
         }
+        else
+        {
+            //without custom gravity a better and faster flight prediction is possible
+            for (int i = 0; i <= numberOfTimesteps; i++)
+            {
+                moveDirRotAtIndex[i] = Quaternion.LookRotation(rb.velocity + i * timeStepDuration * Physics.gravity, Vector3.up);
+                flightPositions[i] = startingCenter + rb.velocity * (float)i * timeStepDuration + 0.5f * Physics.gravity * (float)i * (float)i * timeStepDuration * timeStepDuration;
+                if (i > 0) Debug.DrawLine(flightPositions[i - 1], flightPositions[i], Color.black, Time.fixedDeltaTime);
+            }
+        }
+
+        
 
         //Vector3[] DirectionOfHittingRays = new Vector3[]{new Vector3(), new Vector3(), new Vector3()}; //NOTE: this is the direction of the casted ray, not the hitten surface's
         RaycastHit hit;
@@ -2243,10 +2277,10 @@ public class Car : MonoBehaviour
             Vector3 lineBaseOffset = curveIndex == 0 ? new Vector3(0, 1.5f, 0)
                                    : curveIndex == 1 ? new Vector3(-0.866f, -0.5f, 0)
                                                     : new Vector3(0.866f, -0.5f, 0);
-            dotCurves[curveIndex, 0] = v0[0] + moveDirRotAtIndex[0] * lineBaseOffset;
+            dotCurves[curveIndex, 0] = flightPositions[0] + moveDirRotAtIndex[0] * lineBaseOffset;
             for (int i = 0; i < numberOfTimesteps; i++)
             {
-                dotCurves[curveIndex, i + 1] = v0[i + 1] + moveDirRotAtIndex[i + 1] * lineBaseOffset;
+                dotCurves[curveIndex, i + 1] = flightPositions[i + 1] + moveDirRotAtIndex[i + 1] * lineBaseOffset;
                 float rayLength = Vector3.Distance(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1]);
                 Debug.DrawLine(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1], Color.magenta, Time.fixedDeltaTime);
                 if (Physics.Raycast(dotCurves[curveIndex, i], dotCurves[curveIndex, i + 1] - dotCurves[curveIndex, i], out hit, rayLength, combinedGroundLayers))
@@ -2263,57 +2297,100 @@ public class Car : MonoBehaviour
         if (hitT[0] > minDurationTillHit && hitT[1] > minDurationTillHit && hitT[2] > minDurationTillHit)
         {
             float unreducedTimeToContact = Mathf.Min(hitT[0], hitT[1], hitT[2]);
-            float speedAtContact = (rb.velocity + unreducedTimeToContact * Physics.gravity).magnitude;
+            float speedAtContact = gravityReciver == null ? (rb.velocity + unreducedTimeToContact * Physics.gravity).magnitude : speedAtTimestep[Mathf.FloorToInt(unreducedTimeToContact/timeStepDuration)];
             float earlyerArrival = 0.3f / speedAtContact; //the wheels arrive earlyer at the ground than the car, so time needs to be subtracted.
             float timeToContact = unreducedTimeToContact - earlyerArrival;
-            if (timeToContact > minDurationTillHit)
+            if (timeToContact < minDurationTillHit) return;
+
+
+            Vector3 contactNormal = Vector3.Cross(hitPos[2] - hitPos[0], hitPos[1] - hitPos[0]);
+            Vector3 coaseImpactPos = Vector3.Lerp(flightPositions[Mathf.FloorToInt(timeToContact / timeStepDuration)], flightPositions[Mathf.CeilToInt(timeToContact / timeStepDuration)], (timeToContact / timeStepDuration)%1);
+
+
+            //DEBUG DELETE LATER
+            Debug.DrawRay(hitPos[0], contactNormal, Color.red, Time.fixedDeltaTime);
+            Debug.DrawRay(hitPos[1], contactNormal, Color.red, Time.fixedDeltaTime);
+            Debug.DrawRay(hitPos[2], contactNormal, Color.red, Time.fixedDeltaTime);
+
+
+            ////> Since full rotations are not included in our aimed rotation, they are added here to get the correct deltaRotation later:
+            //int numberOfExtraRotations = Mathf.RoundToInt(rotMagnitudeDone / 360);
+            //Quaternion extraRotationsAsQuaternion = Quaternion.Euler(numberOfExtraRotations * 2 * Mathf.PI / timeToContact * rb.angularVelocity.normalized);
+            //aimedRotation = extraRotationsAsQuaternion * aimedRotation;
+            ////< Since unitys Quaternions only hold rotations up to one full rotation, it is even like that not possibel to include them. We would need another math library or change everyhting to matrix4x4
+
+            float rotMagnitudeDone = rb.angularVelocity.magnitude * Mathf.Rad2Deg * timeToContact;
+            Quaternion rotChangeWithCurrentAngVel = Quaternion.AngleAxis(rotMagnitudeDone, rb.angularVelocity.normalized);
+            Quaternion rotOnArrivalWithCurretnAV = rotChangeWithCurrentAngVel * rb.rotation;
+            Vector3 aimedforward = Vector3.Cross(rotOnArrivalWithCurretnAV * Vector3.right, contactNormal);
+            Quaternion aimedRotation = Quaternion.LookRotation(aimedforward, contactNormal);
+
+            //visual debugging
+            if (visualDebugCar != null)
             {
-                Vector3 contactNormal = Vector3.Cross(hitPos[2] - hitPos[0], hitPos[1] - hitPos[0]);
-                float estimadedYRotOnArival = rb.rotation.eulerAngles.y + rb.angularVelocity.y * Mathf.Rad2Deg * timeToContact;
+                visualDebugCar.SetPositionAndRotation(coaseImpactPos, aimedRotation);
+            }
 
-                float AdaptationForWantedXRot = Vector3.Angle(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal) - 90;
-                Quaternion aimedRotation = Quaternion.Euler(AdaptationForWantedXRot, 0, 0) * Quaternion.LookRotation(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal);
-                //Vector3 wantedRotation = Quaternion.Lerp(rb.rotation, aimedRotation, Time.fixedDeltaTime / timeToContact).eulerAngles;
+            if (doInstantCorrection && timeToContact > 0.7f)
+            {
+                //caculation for instant angular Velocity change
+                //float rotMagnitudeDone = rb.angularVelocity.magnitude * Mathf.Rad2Deg * timeToContact;
+                //Quaternion rotChangeWithCurrentAngVel = Quaternion.AngleAxis(rotMagnitudeDone, rb.angularVelocity.normalized);
+                //Quaternion rotOnArrivalWithCurretnAV = rotChangeWithCurrentAngVel * rb.rotation;
 
-                //Goal orientated Version
-                Vector3 wantedAngularVelChange = Vector3.zero;
+                //float estimadedYRotOnArival = rotOnArrivalWithCurretnAV.eulerAngles.y;
+                //float AdaptationForWantedXRot = Vector3.Angle(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal) - 90;
+                //Quaternion aimedRotation = Quaternion.Euler(AdaptationForWantedXRot, 0, 0) * Quaternion.LookRotation(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal);
+                //TEST FOR BETTER LANDING
+                //Vector3 aimedforward = Vector3.Cross(rotOnArrivalWithCurretnAV * Vector3.right, contactNormal);
+                //Quaternion aimedRotation = Quaternion.LookRotation(aimedforward, contactNormal);
+
+                //visual debugging
+                //if (visualDebugCar != null)
+                //{
+                //    visualDebugCar.SetPositionAndRotation(coaseImpactPos, aimedRotation);
+                //}
+
+                //since expectedToWantedRot * rotOnArrivalWithCurretnAV = aimedRotation
+                Quaternion expextedToWantedRot = aimedRotation * Quaternion.Inverse(rotOnArrivalWithCurretnAV);
+                Quaternion wantedAngularVelQuaternion = expextedToWantedRot * rotChangeWithCurrentAngVel;
+
+                //Vector3 axis;
+                wantedAngularVelQuaternion.ToAngleAxis(out float angle, out Vector3 axis);
+                if (float.IsInfinity(axis.x)) return; //infinite axis means rot is already alligned
+                                                      //if (angle > 180f) angle -= 360f;
+                Vector3 wantedAngularVelocity = (angle * Mathf.Deg2Rad / timeToContact) * axis.normalized;
+                Debug.Log("did INSTANT angular vel change of " + wantedAngularVelocity);
+                //rb.angularVelocity += wantedAngularVelChange; // instant rotation speed change when leaving ground
+                rb.angularVelocity = wantedAngularVelocity;
+            }
+            else if (timeInAir >= minFlightDurationForCorrection)
+            {
+
                 Quaternion expectedRotChange = Quaternion.Euler(
                         rb.angularVelocity.x * Mathf.Rad2Deg * timeToContact,
                         rb.angularVelocity.y * Mathf.Rad2Deg * timeToContact,
                         rb.angularVelocity.z * Mathf.Rad2Deg * timeToContact
                         );
-                //A * B * C = D      means    expected * (CHANGE * current) = aimed 
+
+                //A * B * C = D      means    changeWithCurrentAV * (AVChange * currentRot) = aimed 
                 //B = A^-1 * D * C^-1
-                Quaternion delta = Quaternion.Inverse(expectedRotChange) * aimedRotation * Quaternion.Inverse(rb.rotation);
+                Quaternion AVChange = Quaternion.Inverse(expectedRotChange) * aimedRotation * Quaternion.Inverse(rb.rotation); //WITH OLD AIMED ROTATION
 
 
                 //the angle is calculated by an adaptation of the solution from DMGregory at https://gamedev.stackexchange.com/questions/147409/rotate-from-current-rotation-to-another-using-angular-velocity (15.04.2024)
                 float angle; Vector3 axis;
-                delta.ToAngleAxis(out angle, out axis);
+                AVChange.ToAngleAxis(out angle, out axis);
                 // We get an infinite axis in the event that our rotation is already aligned.
-                if (!float.IsInfinity(axis.x))
-                {
-                    if (angle > 180f)
-                        angle -= 360f;
+                if (float.IsInfinity(axis.x)) return; //infinite axis means rot is already alligned
+                if (angle > 180f) angle -= 360f;
 
-                    //Goal orientated version
-                    wantedAngularVelChange = (0.98f * angle * Mathf.Deg2Rad / timeToContact) * axis.normalized;
-                    wantedAngularVelChange = new Vector3(wantedAngularVelChange.x, 0, wantedAngularVelChange.z);
-                }
-                else
-                {
-                    Debug.Log("axis is infinity (should propably not)");
-                }
+                //Goal orientated version
+                Vector3 wantedAngularVelChange = (0.98f * angle * Mathf.Deg2Rad / timeToContact) * axis.normalized;
+                wantedAngularVelChange = new Vector3(wantedAngularVelChange.x, 0, wantedAngularVelChange.z);
 
-                if (doInstantCorrection && timeToContact > 0.7f)
-                {
-                    rb.angularVelocity += wantedAngularVelChange; // instant rotation speed change when leaving ground
-                }
-                else if (timeInAir >= minFlightDurationForCorrection)
-                {
-                    float angularChangeLimitScale = wantedAngularVelChange.magnitude > maxAngularVelCorrectionInAir * Time.fixedDeltaTime ? maxAngularVelCorrectionInAir * Time.fixedDeltaTime / wantedAngularVelChange.magnitude : 1;
-                    rb.angularVelocity += wantedAngularVelChange * angularChangeLimitScale; // continiouse rotation speed change in the air, limited by maxAngularVelCorrectionInAir.
-                }
+                float angularChangeLimitScale = wantedAngularVelChange.magnitude > maxAngularVelCorrectionInAir * Time.fixedDeltaTime ? maxAngularVelCorrectionInAir * Time.fixedDeltaTime / wantedAngularVelChange.magnitude : 1;
+                rb.angularVelocity += wantedAngularVelChange * angularChangeLimitScale; // continiouse rotation speed change in the air, limited by maxAngularVelCorrectionInAir.
             }
         }
     }
@@ -2355,6 +2432,20 @@ public class Car : MonoBehaviour
             triggeredGroundLeftAlready = false;
             justLeftGround = false;
         }
+    }
+
+
+
+
+    //TESTMETHODE SPÄTER LÖSCHEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Vector3 QuaternionToEulerAngles(Quaternion q)
+    {
+        // Umrechung von Quaternion zu Euler-Winkel
+        float roll = Mathf.Atan2(2f * (q.w * q.x + q.y * q.z), 1f - 2f * (q.x * q.x + q.y * q.y)) * Mathf.Rad2Deg;
+        float pitch = Mathf.Asin(2f * (q.w * q.y - q.z * q.x)) * Mathf.Rad2Deg;
+        float yaw = Mathf.Atan2(2f * (q.w * q.z + q.x * q.y), 1f - 2f * (q.y * q.y + q.z * q.z)) * Mathf.Rad2Deg;
+
+        return new Vector3(roll, pitch, yaw);
     }
 }
 

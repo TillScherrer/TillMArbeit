@@ -186,6 +186,7 @@ public class CarEditor : Editor
     //visualisation
     Transform[] visualWheels;
     SerializedProperty placeOnPhysicalWheel;
+    SerializedProperty visualDebugCar;
 
     int speedUnit = 0;
     string speedUnitWord = "";
@@ -360,7 +361,7 @@ public class CarEditor : Editor
 
             
         placeOnPhysicalWheel = serializedObject.FindProperty("placeOnPhysicalWheel");
-
+        visualDebugCar = serializedObject.FindProperty("visualDebugCar");
 
 
 
@@ -978,7 +979,7 @@ public class CarEditor : Editor
             InsertVisualWheel(i);
         }
 
-
+        EditorGUILayout.PropertyField(visualDebugCar);
         ClosePreviouseSection(sectionCount);
 
         //prevent user from setting invalide values
