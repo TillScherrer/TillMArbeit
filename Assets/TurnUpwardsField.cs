@@ -6,12 +6,8 @@ using UnityEngine;
 [Serializable]
 public class TurnUpwardsField
 {
-    [SerializeField]
-    float toleratedAngle = 5f;
-    [SerializeField]
-    float maxRotSpeed = 60f;
-    [SerializeField]
-    float maxRotSpeedChange = 100f;
-    [SerializeField]
-    float downwardAcceleration = 0f;
+    public float toleratedAngle = 5f;
+    public float maxRotSpeed = 60f;
+    public float maxRotSpeedChange = 100f;
+    public float downwardAcceleration = 0f;
 }

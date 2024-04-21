@@ -245,7 +245,14 @@ public class Car : MonoBehaviour
     float[] currentWheelSpinningSpeeds = new float[] {0,0,0,0};
     float[] lengthwiseForceAtWheels = new float[] { 0, 0, 0, 0 };
     float[] sidewayGripAtWheels = new float[] { 0, 0, 0, 0 };
+    float currentFowardSpeed = 0;
     float currentAverageWheelSpinningSpeed = 0;
+
+    float[] fowardSpeedOverGroundAtWheel = new float[4];
+    float[] sideSlideSpeeds = new float[4];
+    Vector3[] fowardOnGroundAtWheel = new Vector3[4];
+    Vector3[] sideSlideDirections = new Vector3[4];
+
     float[] visualWheelCurrentXRot = new float[4];
     float[] visualWheelRPS = new float[4];
     float[] longitudalRatioAndDirectionalScalingGripAtPreviouseFrame = new float[] {0.1f,0.1f,0.1f,0.1f}; //TO DO: SAVE FROM PREVIOUSE FRAME
@@ -258,12 +265,16 @@ public class Car : MonoBehaviour
     Vector3 inertiaTensorWS = Vector3.one;
     float frontSteeringAngle = 0;
     float rearSteeringAngle = 0;
+    float turningRadius = Mathf.Infinity;
+
 
     int numberOfGroundedWheels = 0;
     float timeInAir = 0;
     bool triggeredGroundLeftAlready = false;
     bool justLeftGround = false;
     float lastContactWithGround = 0;
+    Vector3 previouslyAcceptedGroundNormal = Vector3.up;
+    Vector3 currentGroundNormal = Vector3.up;
 
 
     //input bools
@@ -434,34 +445,52 @@ public class Car : MonoBehaviour
         float[] springCompressionForce = GetSpringCompressionForce(springCompressions);
         float[] dampingForces = new float[4];
         Vector3[] verticalForces = new Vector3[4];
-        //Vector3[] verticalForcesWithoutDamping = new Vector3[4];
         for (int i = 0; i < 4; i++)
         {
             //SUSPENSION
-            //suspension
-            //suspPowers[i] = springCompressions[i] * springPower[i];
             //damping
             float deltaSpringCompression = absoluteSpringCompressions[i] - previousSpringCompressions[i];
-            float dampingCoefficient = i < 2 ? damping : damping;
-            dampingForces[i] = dampingCoefficient * deltaSpringCompression / Time.fixedDeltaTime * springCompressions[i] * rb.mass;
-            //verticalForcesWithoutDamping[i] = hitNormals[i] * suspPowers[i] * rb.mass;
-
-            //verticalForces[i] = hitNormals[i] * (suspPowers[i] + dampingValue) * rb.mass;
+            dampingForces[i] = damping * deltaSpringCompression / Time.fixedDeltaTime * springCompressions[i] * rb.mass;
+            
             verticalForces[i] = hitNormals[i] * (springCompressionForce[i]+ dampingForces[i]);
 
-            rb.AddForceAtPosition(verticalForces[i], hitPoints[i]);
-            //handle hard bump when wheelSprings are compressed over the maximum
-            if (absoluteSpringCompressions[i] > looseSpringOffsetLength[i] + upwardSuspensionCap[i])
+            float currentSpeedAwayFromGroundNormal = Vector3.Dot(GetActualPointVelocity(hitPoints[i]), hitNormals[i]);
+
+            //reduce supsension power when already moving upwards, if the anti-jump-option is on
+            if(currentSpeedAwayFromGroundNormal > 0)
             {
-                float currentSpeedAlongLoadingDirection =  Vector3.Dot(rb.GetPointVelocity(hitPoints[i]), -transform.up); //Projection of other directionalV on my directionalV
+                //make apply smoothly depending on upward speed
+                float scalerFromUpSpeed = Mathf.Lerp(0, 1, currentSpeedAwayFromGroundNormal * 10); //reach maximum effect at 0.1 upward speed
+                float reduction = Mathf.Lerp(0, 1, scalerFromUpSpeed * antiJumpSuspension);
+                verticalForces[i] *= (1f - reduction);
+            }
+
+            float suspensionAngle = Vector3.Angle(hitNormals[i], transform.up);
+            //reduce sping power at very high angles (scaling from 1 to zero between 70 and 90 degree)
+            if(suspensionAngle > 50)
+            {
+                verticalForces[i] *= (90f - suspensionAngle) / 40f;
+            }
+
+
+            rb.AddForceAtPosition(verticalForces[i], hitPoints[i]);
+
+            //the downward movement can be fully stopped as a hard bump, when ether springs are compressed over their maximum, or partially when the angle is very high
+            float downwardMovementHardStop = 0;
+            //stop downward movmenet partially when the angle between suspension and ground is too high
+            if (suspensionAngle > 70) downwardMovementHardStop = 1-((90f - suspensionAngle) / 20f);
+            //stop downward movement completely when the spring is compressed over its limit
+            if (absoluteSpringCompressions[i] > looseSpringOffsetLength[i] + upwardSuspensionCap[i]) downwardMovementHardStop = 1;
+            if (downwardMovementHardStop != 0)
+            {              
                 //if it is not already in a state of extending the spring again
-                if(currentSpeedAlongLoadingDirection>0) //hardstop is only needed, when it is not already in a state of extending the spring again
+                if(currentSpeedAwayFromGroundNormal<0) //hardstop is only needed, when it is not already in a state of extending the spring again
                 {
                     (float vTotal, float vFromDir, Vector3 w, Vector3 rotToV, Vector3 treatedDirection) effectOfFullImpulseStop;
-                    effectOfFullImpulseStop = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(hitPoints[i], transform.up, currentSpeedAlongLoadingDirection * rb.mass);
-                    float scalerToReachAimedSpeed = currentSpeedAlongLoadingDirection / effectOfFullImpulseStop.vTotal;
-                    Vector3 angularChange = effectOfFullImpulseStop.w * scalerToReachAimedSpeed;
-                    Vector3 directionalChange = effectOfFullImpulseStop.vFromDir * effectOfFullImpulseStop.treatedDirection * scalerToReachAimedSpeed;
+                    effectOfFullImpulseStop = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(hitPoints[i], hitNormals[i], -currentSpeedAwayFromGroundNormal * rb.mass);
+                    float scalerToReachAimedSpeed = -currentSpeedAwayFromGroundNormal / effectOfFullImpulseStop.vTotal;
+                    Vector3 angularChange = effectOfFullImpulseStop.w * scalerToReachAimedSpeed * downwardMovementHardStop;
+                    Vector3 directionalChange = effectOfFullImpulseStop.vFromDir * effectOfFullImpulseStop.treatedDirection * scalerToReachAimedSpeed * downwardMovementHardStop;
                     rb.AddRelativeTorque(new Vector3(angularChange.x * inertiaTensorWS.x, angularChange.y * inertiaTensorWS.y, angularChange.z * inertiaTensorWS.z), ForceMode.Impulse);
                     rb.AddForce(directionalChange * rb.mass, ForceMode.Impulse);
                 }
@@ -472,59 +501,50 @@ public class Car : MonoBehaviour
 
 
         //STEERING
-        float currentSpeed = Vector3.Dot(rb.velocity, transform.forward);
+        currentFowardSpeed = Vector3.Dot(rb.velocity, transform.forward);
         float frontSteerDifFor30ms = frontSteerAtZeroSpeed - frontSteerAt30MS; //front
-        float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
+        float currentMaxFrontSteerAngle = frontSteerAt30MS + frontSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentFowardSpeed) / 30));
         UpdateRawSteerAngle(ref frontSteeringAngle, currentMaxFrontSteerAngle);
         float rearSteerDifFor30ms = rearSteerAtZeroSpeed - rearSteerAt30MS;    //rear
-        float currentMaxRearSteerAngle = rearSteerAt30MS + rearSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentSpeed) / 30));
+        float currentMaxRearSteerAngle = rearSteerAt30MS + rearSteerDifFor30ms * (-1 + 2 / Mathf.Pow(2, Mathf.Abs(currentFowardSpeed) / 30));
         UpdateRawSteerAngle(ref rearSteeringAngle, currentMaxRearSteerAngle);
         UpdateSteeringAngles(hitPoints);
         
 
-        //GEAR SHIFTING  
-        ComputeGearShiftState(); //(input has already been managed in "Update()". Therefor the registered input is computed here)
-
-        //TESTDRIVING
-        currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
-        //float currentRelSpeed = speedupCurve.GetTimeInCurve(currentSpeed);        
-        //accelerationScalerByClutch = Mathf.Lerp(1, GetClutchValue(), shiftingImpactOnAcceleration);
-        //float accelerationScalerBySuitabilityOfGear = GetAccelerationScaleByGear(currentGear, currentSpeed); //TO CHANGE: depend on wheel spin speed later
-        //float totalGearAccelerationMultiplier = accelerationScalerByClutch * accelerationScalerBySuitabilityOfGear;
-        //set steering Angle (front)
         
 
-        Vector3[] fowardOnGround = new Vector3[4];
-        float[] fowardSpeedOverGroundAtWheel = new float[4];
-        Vector3[] sideSlideDirections = new Vector3[4];
-        float[] sideSlideSpeeds = new float[4];
+
+
+        //UpdateHorizontalMovementParameters
         for (int i = 0; i < 4; i++)
         {
             //forward
             Vector3 sideDirectionR = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.right);
             if (hitNormals[i] == Vector3.zero)// = if this wheel is not in contact with the ground, take local foward vector of wheel instead
             {
-                fowardOnGround[i] = Vector3.Cross(sideDirectionR, transform.up).normalized;
+                fowardOnGroundAtWheel[i] = Vector3.Cross(sideDirectionR, transform.up).normalized;
             }
             else
             {
-                fowardOnGround[i] = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
+                fowardOnGroundAtWheel[i] = Vector3.Cross(sideDirectionR, hitNormals[i]).normalized;
             }
-            fowardSpeedOverGroundAtWheel[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), fowardOnGround[i]);
+            fowardSpeedOverGroundAtWheel[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), fowardOnGroundAtWheel[i]);
             //Debug.DrawRay(hitPointForLongitudal[i], fowardOnGround[i] * fowardSpeedOverGroundAtWheel[i]);
 
             //sideward
             Vector3 directionFoward = rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward);
             Vector3 rOnGround = Vector3.Cross(hitNormals[i], directionFoward);
             sideSlideDirections[i] = (rOnGround * ((Vector3.Angle(GetActualPointVelocity(hitPointForLateral[i]), rOnGround) > 90) ? -1 : 1)).normalized;
-            sideSlideSpeeds[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLateral[i]), sideSlideDirections[i]); // CHECK IF THIS IS CORRECT!!!!
+            sideSlideSpeeds[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLateral[i]), sideSlideDirections[i]);
             //Debug.DrawRay(hitPointForLateral[i], -sideSlideDirections[i].normalized, Color.black);
-            //if (i == 0) Debug.DrawRay(hitPoints[i], -slideDirection.normalized * 0.1f, Color.blue, 0.3f);
             //Debug.DrawRay(hitPoints[i], rb.GetPointVelocity(hitPoints[i]), Color.cyan);
         }
 
+        //GEAR SHIFTING  
+        ComputeGearShiftState(); //(input has already been managed in "Update()". Therefor the registered input is computed here)
 
-
+        //ACCELERATION AND BREAKING
+        currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
         (float atFullThrottle, float atNoThrottle) motorAcceleration = GetMotorAccelerationAbs();
         //Note: "motorAcceleration.atNoThrottle" is always 0 or negative, whereas ".atFullThrottle" it is usualy positive but could also turn out negative if a very unsuitable gear is used.
         ActionMode actionMode;
@@ -620,13 +640,6 @@ public class Car : MonoBehaviour
             usedSlipPreventer = 0;
             if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
         }
-
-
-        //Debug.Log("totalAvailablePower " + totalAvailablePower);
-        //Debug.Log("forceDirection " + forceDirection);
-        //Debug.Log("actionMode " + actionMode);
-        //Debug.Log("frontWheelsPowerShare " + frontWheelsPowerShare);
-        //Debug.Log(" "+);
 
         //TO DO: FÜR VORDER UND HINTERRADPAAR ZUSÄTZLICH NO THROTTLE DRAUF PACKEN, FALLS MAXIMUM DADURCH NICHT ÜBERSCHRITTEN WIRD
         //float aimedAccelerationDirection = currentGear < 0 ? -1 : 1;
@@ -761,24 +774,7 @@ public class Car : MonoBehaviour
                 //Debug.Log("spinningSpeed after S0 = " + spinningSpeed+", availablePower after = "+availablePower);
 
             }
-            //}
-            //else //(note: the available power can be negative for backward power. Keep this in mind when looking at the operators of scopes like this, where fowardPower == false)
-            //{
-            //    if (lengthwiseSpeedOverGround < spinningSpeed)
-            //    {
-            //        float neededPowerToMakeSpinMatch = powerRatioForRotation * (lengthwiseSpeedOverGround - spinningSpeed);
-            //        if (neededPowerToMakeSpinMatch <= availablePower)
-            //        {
-            //            spinningSpeed = Mathf.Lerp(spinningSpeed, lengthwiseSpeedOverGround, availablePower / neededPowerToMakeSpinMatch);
-            //            goto beforeGripByOnlySpinOffset;
-            //        }
-            //        else
-            //        {
-            //            spinningSpeed = lengthwiseSpeedOverGround;
-            //            availablePower -= neededPowerToMakeSpinMatch;
-            //        }
-            //    }
-            //}
+            
 
             //ansonsten gibt es:
             // wheelspin, grip, power at:
@@ -874,10 +870,10 @@ public class Car : MonoBehaviour
             //SZENARIO 2: when there is more force to change the cars speed, than grip to apply this force, the offset rises till the forces match or all excess energy turns into wheel spin (unless specifically regulated)
             else if (availableGripWithCurrentSpin.lengthwise < availablePower * availablePowerDirection)
             {                                                                                   
-                //To Do: bei folgendem darauf achten, dass es auch für rückwärts force funktioniert
                 if (spinningSpeed * availablePowerDirection < plannedSpinningSpeedForBestSlipRatio * availablePowerDirection) //having a lower slip, than the perfect slip ratio
                 {
-                    if (availableGripPowerWithBestSlipRatioSpin.lengthwise > availablePowerForBestSlipRatio * availablePowerDirection) //if the grip is yet not good enough at the current spin, but would be, if it spins at the perfect slip ratio, find the spinSpeed between thouse, where grip and power are equal.
+                    //if the grip is yet not good enough at the current spin, but would be, if it spins at the perfect slip ratio, find the spinSpeed between thouse, where grip and power are equal.
+                    if (availableGripPowerWithBestSlipRatioSpin.lengthwise > availablePowerForBestSlipRatio * availablePowerDirection)
                     {
                         //the difference of the wheel spin and available power between the current conditions and what would be, if the wheels spin as fast as needed for the perfect slip ratio
                         float spinDif = plannedSpinningSpeedForBestSlipRatio - spinningSpeed;
@@ -948,7 +944,7 @@ public class Car : MonoBehaviour
 
                 
             }
-            else //SZENARIO x: the aviable grip at the current wheel spinning speed fits exactly the power used to change the cars speed. Therefore the wheel spin does not change at all
+            else //SZENARIO 3: the aviable grip at the current wheel spinning speed fits exactly the power used to change the cars speed. Therefore the wheel spin does not change at all
             {
                 availableGripWithPlannedSpin = GetSpecificGripPower(plannedSpin, lengthwiseSpeedOverGround, sideSlideSpeeds[i], availablePowerDirection, collidedGroundType[i], normalForcesUsedForGrip[i], i < 2);
                 if (float.IsNaN(plannedSpin)) { Debug.LogError("invalide SpinningSpeed in SZENARIO 3"); }
@@ -995,219 +991,78 @@ public class Car : MonoBehaviour
                 longitudalRatioAndDirectionalScalingGripAtPreviouseFrame[i] = availableGripWithPlannedSpin.lengthwise / normalForcesUsedForGrip[i];
             }
             //Debug.Log("fowardOnGround is: " + fowardOnGround[i] + "  hitPointForLongitudal is: " + hitPointForLongitudal[i]);
-            rb.AddForceAtPosition(fowardOnGround[i] * lengthwiseForceAtWheels[i], hitPointForLongitudal[i], ForceMode.Impulse);
-            Debug.DrawRay(hitPoints[i], (fowardOnGround[i] * lengthwiseForceAtWheels[i] - sideSlideDirections[i] * sidewayGripAtWheels[i])*10, Color.blue);
+
+            //rb.AddForceAtPosition(fowardOnGround[i] * lengthwiseForceAtWheels[i], hitPointForLongitudal[i], ForceMode.Impulse);
+            //Debug.DrawRay(hitPoints[i], (fowardOnGround[i] * lengthwiseForceAtWheels[i] - sideSlideDirections[i] * sidewayGripAtWheels[i])*10, Color.blue);
             //Debug.Log("lengthwise Grip: "+ lengthwiseForceAtWheels[i] + ", Side Grip is: " + sidewayGripAtWheels[i]);
             //Debug.Log("With direction - lengthwise Grip: " + fowardOnGround[i] * lengthwiseForceAtWheels[i] + ", Side Grip is: " + -sideSlideDirections[i] * sidewayGripAtWheels[i]);
         }
         currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
-        
 
-       //float rearWheelMotorShare = 1 - rearOrFrontPowered;
-
-
-
-       //float averatgeWheelSpeed = (speedAtWheel[0] + speedAtWheel[1] + speedAtWheel[2] + speedAtWheel[3]) / 4f;
-       //bool usingBackwardGear = currentGear < 0;
-       //float gearDirection = usingBackwardGear ? -1 : 1;
-
-       //float moveDirectionMultiplier = currentSpeed < 0 ? -1 : 1;
-       ////VORISCHT: BISHER IST ALLES FOLGENDE NUR FÜR VORWÄRTS DREHENDE RÄTER IMPLEMENTIERT - oder doch schon?
-       //float combinedAcceleration;
-       //float basicDecceleration = -testBasicSlowdown; //Replace with actual current basic slowdown
-       //float breakingDecceleration = -testBreakingSlowdown; //Replace with actual current breaking slowdown
-       //float maxThrottleAcceleration = speedupCurve.GetAccelerationValueForSpeed(Mathf.Abs(currentAverageWheelSpinningSpeed)) * totalGearAccelerationMultiplier; //Remove Mathf.abs and replace with other curve later!!
-
-
-       //bool canPassZeroByAcceleration; //TO DO: muss noch in logik eingebaut werden, nur beschleunigungne können aktiv richtungswechsel initiieren
-
-       //if (HandbreakKey.Value > 0)
-       //{
-       //    //not implemented yet
-       //    combinedAcceleration = -wheelSpinningDirectionalMultiplier;
-       //}
-       //else if(BreakKey.Value > 0)
-       //{
-       //    float deccelerationWithoutBreake;
-       //    if (maxThrottleAcceleration + basicDecceleration < 0)
-       //    {
-       //        deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
-       //        if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
-       //    }
-       //    else
-       //    {
-       //        deccelerationWithoutBreake = basicDecceleration;
-       //    }
-       //    combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake,-testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;    
-       //}
-       //else if ( (gearShiftMode == GearShiftMode.Automatic || numberOfGears==0) ? (currentGear >=0 && ThrottleKey.Value > 0) : ThrottleKey.Value > 0) //TO DO: BACKWARD CASES
-       //{ 
-
-       //    if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
-       //    {
-       //        combinedAcceleration = Mathf.Lerp(basicDecceleration * moveDirectionMultiplier, maxThrottleAcceleration * gearDirection, ThrottleKey.Value);
-       //    }
-       //    else if (maxThrottleAcceleration> breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
-       //    {
-       //        float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, ThrottleKey.Value);
-       //        combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
-       //        if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
-       //        combinedAcceleration *= wheelSpinningDirectionalMultiplier;
-
-       //    }
-       //    else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
-       //    {
-       //        combinedAcceleration = breakingDecceleration * wheelSpinningDirectionalMultiplier;
-       //    }
-       //}
-       //else if (BackwardThrottleKey.Value > 0) //THIS HAS TO BE REPLACED WITH A CONCEPT FOR DRIVING BACKWARDS //TO DO: BACKWARD CASES
-       //{
-       //    if (maxThrottleAcceleration > 0) //Gear can create Acceleration for current wheel speed
-       //    {
-       //        combinedAcceleration = Mathf.Lerp(basicDecceleration, maxThrottleAcceleration, BackwardThrottleKey.Value);
-       //    }
-       //    else if (maxThrottleAcceleration > breakingDecceleration) //Gear is so bad for current speed that it slows it down, but less than the breaking decceleration
-       //    {
-       //        float minusFromBasicDecceleration = Mathf.Lerp(basicDecceleration, 0, BackwardThrottleKey.Value);
-       //        combinedAcceleration = maxThrottleAcceleration + minusFromBasicDecceleration;
-       //        if (combinedAcceleration < breakingDecceleration) combinedAcceleration = breakingDecceleration;
-       //    }
-       //    else //gear is so bad that it would slow down more than breaking, but we use breaking as a limit
-       //    {
-       //        combinedAcceleration = breakingDecceleration;
-       //    }
-       //    combinedAcceleration *= -1;
-       //}
-       //else //only rolling- and air resistance
-       //{
-       //    float deccelerationWithoutBreake;
-       //    if (maxThrottleAcceleration + basicDecceleration < 0)
-       //    {
-       //        deccelerationWithoutBreake = maxThrottleAcceleration + basicDecceleration;
-       //        if (deccelerationWithoutBreake < -testBreakingSlowdown) deccelerationWithoutBreake = -testBreakingSlowdown;
-       //    }
-       //    else
-       //    {
-       //        deccelerationWithoutBreake = basicDecceleration;
-       //    }
-       //    combinedAcceleration = Mathf.Lerp(deccelerationWithoutBreake, -testBreakingSlowdown, BreakKey.Value) * wheelSpinningDirectionalMultiplier;
-       //}
-       //for (int i = 0; i < 4; i++)
-       //{
-       //    rb.AddForceAtPosition(fowardOnGround[i] * combinedAcceleration / 4f, hitPointForLongitudal[i]);
-       //}
-
-
-
-
-       //SIDEWARD FRICTION
-
-       (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[] impulseProperties = new (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[4];
+        float[] maxLengthwiseImpulse = new float[4];
+        Vector3[] directionToApplyLengthwiseForce = new Vector3[4];
+        bool[] isBreaking = new bool[4];
+        float[] currentMovementAgainstForceDir= new float[4];
         for (int i = 0; i < 4; i++)
         {
-            //SIDEWARD FRICTION
-            
-            
+            directionToApplyLengthwiseForce[i] = (fowardOnGroundAtWheel[i] * lengthwiseForceAtWheels[i]).normalized;
+            maxLengthwiseImpulse[i] = (fowardOnGroundAtWheel[i] * lengthwiseForceAtWheels[i]).magnitude;
+            isBreaking[i] = !canLeadToDirectionChange[i];
 
-            float maxStopImpulse;
+            currentMovementAgainstForceDir[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), -directionToApplyLengthwiseForce[i].normalized);
+        }
+        //apply lengthwise friciton
+        BalanceAndApplyImpulses(hitPointForLongitudal, directionToApplyLengthwiseForce, maxLengthwiseImpulse, currentMovementAgainstForceDir, isBreaking);
+
+
+        //SIDEWARD FRICTION
+        float[] maxStopImpulse = new float[4];
+        Vector3[] directionToApplyBreakingForce = new Vector3[4];
+        for (int i = 0; i < 4; i++)
+        {
+            directionToApplyBreakingForce[i] = -sideSlideDirections[i];
             if (endlessSidewaysGrip)
             {
-                maxStopImpulse = sideSlideSpeeds[i]* rb.mass / 4; 
+                maxStopImpulse[i] = sideSlideSpeeds[i] * rb.mass / 4;
 
             }
             else
             {
-                //maxStopImpulse = normalForcesUsedForGrip[i] * 1.5f * Time.fixedDeltaTime;//verticalForce.magnitude*0.1f * Time.fixedDeltaTime; //TEST VALUE!!!
-                maxStopImpulse = sidewayGripAtWheels[i];
-                Debug.DrawRay(hitPoints[i],  - sideSlideDirections[i] * sidewayGripAtWheels[i] * 10, Color.green);
+                maxStopImpulse[i] = sidewayGripAtWheels[i];
+                
             }
-           
-            impulseProperties[i] = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(hitPointForLateral[i], -sideSlideDirections[i], maxStopImpulse); 
-        }
-        float[,] maxsConversionsToMyV = new float[4,4]; //How much would the maximum impulse of another Wheel impact my own directional velocity [toMyV,fromOtherRatio]
-        for(int i = 0; i < 4; i++)
-        {
-            //Debug.Log("maxVTotal= " + impulseProperties[i].maxV);
-            //Debug.Log("maxVDir= " + impulseProperties[i].maxVDir);
-            //Debug.Log("maxV From OWN rotation= " + (impulseProperties[i].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[i].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[i].maxW.z * impulseProperties[i].rotToV.z));
-            for (int j = 0; j < 4; j++)
+
+            //reduce sidewardForce when the side of the wheel is on the ground
+            float wheelSidewardAngle = Mathf.Abs(Vector3.SignedAngle(hitNormals[i], transform.up, transform.forward));
+            if(wheelSidewardAngle > 75)
             {
-                if (i == j)
-                {
-                    maxsConversionsToMyV[i,j] = 0; //exclude conversion from self
-                }
-                else if (impulseProperties[j].maxV == 0)
-                {
-                    maxsConversionsToMyV[i, j] = 0; //no conversion from wheel, which is not on ground
-                }
-                else
-                {
-                    float fromOtherMaxV = Vector3.Dot(impulseProperties[j].maxVDir * impulseProperties[j].vDirection , impulseProperties[i].vDirection.normalized); //Projection of other directionalV on my directionalV
-                    //Debug.Log("fromOtherV: " + fromOtherMaxV);
-                    float fromOtherMaxW = impulseProperties[j].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[j].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[j].maxW.z * impulseProperties[i].rotToV.z;
-                    maxsConversionsToMyV[i,j] = fromOtherMaxV + fromOtherMaxW;
-                }
-                //Debug.Log("maxConversionsToMyV[" + i + "," + j + "]=" + maxsConversionsToMyV[i, j]);
+                maxStopImpulse[i] = 0;
             }
-        }
-        float[] plannedRatios = new float[4] {0,0,0,0};
-        float[] prevIterationPR = new float[4] {-2,-2,-2,-2};
-        //every wheels Friction is limited to only stop the wheels lateral movement and can not make it move into the opposide direction
-        //this loop chooses this correct possible friction impulse with respect to all interactions with other wheels
-        for (int iterationCount = 0; iterationCount < 100; iterationCount++)
-        {
-
-            for (int i = 0; i < 4; i++)
+            else if (wheelSidewardAngle > 50)
             {
-                if (impulseProperties[i].maxV == 0) //ignore Wheels without friction/ without contact to floor
-                {
-                    plannedRatios[i] = 0;
-                    continue;
-                }
-                float vFromOtherWheels = maxsConversionsToMyV[i,0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
-                float neededOwnV = sideSlideSpeeds[i] - vFromOtherWheels;
-                plannedRatios[i] = neededOwnV / impulseProperties[i].maxV; //* 0.9f; //DELETE *0.9f LATER!!!!
-                if (plannedRatios[i] > 1) plannedRatios[i] = 1;
-                if (plannedRatios[i] < -1) plannedRatios[i] = -1;
+                maxStopImpulse[i] *= (75 - wheelSidewardAngle) / 25f;
             }
-
-            if (plannedRatios[0] == prevIterationPR[0] && plannedRatios[1] == prevIterationPR[1] && plannedRatios[2] == prevIterationPR[2] && plannedRatios[3] == prevIterationPR[3])
-            {
-                //Debug.Log("Left after "+iterationCount+" iterations");
-                break;
-            }
-            //if (iterationCount == 99) Debug.LogError("exit iteration with emergency exit, prevIterationPR=" + prevIterationPR + " plannedRatios=" + plannedRatios);
-            prevIterationPR[0] = plannedRatios[0]; prevIterationPR[1] = plannedRatios[1]; prevIterationPR[2] = plannedRatios[2]; prevIterationPR[3] = plannedRatios[3];
+            //Debug.DrawRay(hitPoints[i], sideSlideDirections[i].normalized * -maxStopImpulse[i] / Time.fixedDeltaTime * 0.2f, Color.green);
         }
+        
 
-        //Apply friction-impulses of all wheels
-        Vector3 angularVelChange = Vector3.zero;
-        Vector3 directionalVelChange = Vector3.zero;
-        for (int i = 0; i < 4; i++)
-        {
-            angularVelChange += plannedRatios[i] * impulseProperties[i].maxW;
-            directionalVelChange += plannedRatios[i] * impulseProperties[i].maxVDir * impulseProperties[i].vDirection;
-            //onlyForDebug
-            float vFromOtherWheels = maxsConversionsToMyV[i, 0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
-            //Debug.Log("estimatedV[" + i + "] with ratio " + plannedRatios[i] + ", slideSpeed="+slideSpeeds[i] +", selfV="+ impulseProperties[i].maxV * plannedRatios[i] +", vFromOthers="+ vFromOtherWheels +",   ->v: "+ (impulseProperties[i].maxV * plannedRatios[i]+ vFromOtherWheels- slideSpeeds[i]));
-        }
-        //Debug.Log("planned Ratios: " + plannedRatios[0] + ", " + plannedRatios[1] + ", " + plannedRatios[2] + ", " + plannedRatios[3]);
-        //Debug.Log("angularChange= " + angularVelChange + ",   directionalChange=" + directionalVelChange);
-        //rb.AddTorque(new Vector3(angularVelChange.x*inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
-        //local
-        rb.AddRelativeTorque(new Vector3(angularVelChange.x * inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
-        rb.AddForce(directionalVelChange * rb.mass, ForceMode.Impulse);
+        bool[] sidewardForceIsABreakingForce = new bool[] {true,true,true,true};
+        BalanceAndApplyImpulses(hitPointForLateral, directionToApplyBreakingForce, maxStopImpulse, sideSlideSpeeds, sidewardForceIsABreakingForce);
 
+
+        ApplyArcadySteeringOrAirSteering();
 
         previousSpringCompressions = absoluteSpringCompressions;
         //float timeUsed = (Time.realtimeSinceStartup - currentTime) / Time.fixedDeltaTime;
         //Debug.Log("Timeratio used is " + timeUsed);
 
+        ApplyTurnUpwards();
+
         //Compute Ground-Air-Status
         PerformInAirBalance();
 
         //Manage Audio
-        ManageAudioAndGUI(currentGear, currentAverageWheelSpinningSpeed, currentSpeed); //TO CHANGE: USE WHEEL SPIN INSTEAD
+        ManageAudioAndGUI(currentGear, currentAverageWheelSpinningSpeed, currentFowardSpeed); //TO CHANGE: USE WHEEL SPIN INSTEAD
 
 
         //Debug.Log("estimatedVelNextFrame = " + GetActualPointVelocity(Vector3.one));
@@ -1218,7 +1073,116 @@ public class Car : MonoBehaviour
 
 
 
+    private void BalanceAndApplyImpulses(Vector3[] posToApplyForce, Vector3[] directionToApplyForce, float[] maxForce, float[] currentSpeedAgainstForceDirection, bool[] isBreakingForce)
+    {
+        (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[] impulseProperties = new (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[4];
+        for (int i = 0; i < 4; i++)
+        {
+            impulseProperties[i] = CalculateEffectOfImpulseOnDirectionalMovementAtPoint(posToApplyForce[i], directionToApplyForce[i], maxForce[i]);
 
+            //the impact of the rotation by applying force at a certain position is reduced depending on how much the natural steering is disabled for aracde steering
+            impulseProperties[i].maxW = impulseProperties[i].maxW * (1f - disableNaturalSteering);
+            impulseProperties[i].maxV = Mathf.Lerp(impulseProperties[i].maxV, impulseProperties[i].maxVDir, disableNaturalSteering);
+        }
+        float[,] maxsConversionsToMyV = new float[4, 4]; //How much would the maximum impulse of another Wheel impact my own directional velocity [toMyV,fromOtherRatio]
+        for (int i = 0; i < 4; i++)
+        {
+            //Debug.Log("maxVTotal= " + impulseProperties[i].maxV);
+            //Debug.Log("maxVDir= " + impulseProperties[i].maxVDir);
+            //Debug.Log("maxV From OWN rotation= " + (impulseProperties[i].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[i].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[i].maxW.z * impulseProperties[i].rotToV.z));
+            for (int j = 0; j < 4; j++)
+            {
+                if (i == j)
+                {
+                    maxsConversionsToMyV[i, j] = 0; //exclude conversion from self
+                }
+                else if (impulseProperties[j].maxV == 0)
+                {
+                    maxsConversionsToMyV[i, j] = 0; //no conversion from wheel, which is not on ground
+                }
+                else
+                {
+                    float fromOtherMaxV = Vector3.Dot(impulseProperties[j].maxVDir * impulseProperties[j].vDirection, impulseProperties[i].vDirection.normalized); //Projection of other directionalV on my directionalV
+                    //Debug.Log("fromOtherV: " + fromOtherMaxV);
+                    float fromOtherMaxW = impulseProperties[j].maxW.x * impulseProperties[i].rotToV.x + impulseProperties[j].maxW.y * impulseProperties[i].rotToV.y + impulseProperties[j].maxW.z * impulseProperties[i].rotToV.z;
+                    maxsConversionsToMyV[i, j] = fromOtherMaxV + fromOtherMaxW;
+                }
+                //Debug.Log("maxConversionsToMyV[" + i + "," + j + "]=" + maxsConversionsToMyV[i, j]);
+            }
+        }
+        
+        //breaking forces start with a ratio of 0. That way the aproximation does not oscillate
+        float[] plannedRatios = new float[4] { 0, 0, 0, 0 };
+        float[] prevIterationPR = new float[4] { -2, -2, -2, -2 };
+
+        int numberOfAccelerationForces = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (!isBreakingForce[i])
+            {
+                numberOfAccelerationForces++;
+                plannedRatios[i] = 1;
+            }
+        }
+
+        //every wheels Friction is limited to only stop the wheels lateral movement and can not make it move into the opposide direction
+        //this loop chooses this correct possible friction impulse with respect to all interactions with other wheels
+        if(numberOfAccelerationForces < 4) //aproximation is only needed for breaking forces. So this part is skipped if every wheel accelerates.
+        {
+            for (int iterationCount = 0; iterationCount < 100; iterationCount++)
+            {
+
+                for (int i = 0; i < 4; i++)
+                {
+                    if (!isBreakingForce[i])
+                    {
+                        continue; //no need to limit forces, which are no breaking forces
+                    }
+
+
+                    if (impulseProperties[i].maxV == 0) //ignore Wheels without friction/ without contact to floor
+                    {
+                        plannedRatios[i] = 0;
+                        continue;
+                    }
+                    float vFromOtherWheels = maxsConversionsToMyV[i, 0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
+                    float neededOwnV = currentSpeedAgainstForceDirection[i] - vFromOtherWheels;
+                    plannedRatios[i] = neededOwnV / impulseProperties[i].maxV;
+                    if (plannedRatios[i] > 1) plannedRatios[i] = 1;
+                    if (plannedRatios[i] < -1) plannedRatios[i] = -1;
+                }
+
+                if (plannedRatios[0] == prevIterationPR[0] && plannedRatios[1] == prevIterationPR[1] && plannedRatios[2] == prevIterationPR[2] && plannedRatios[3] == prevIterationPR[3])
+                {
+                    //Debug.Log("Left after "+iterationCount+" iterations");
+                    break;
+                }
+                //if (iterationCount == 99) Debug.LogError("exit iteration with emergency exit, prevIterationPR=" + prevIterationPR + " plannedRatios=" + plannedRatios);
+                prevIterationPR[0] = plannedRatios[0]; prevIterationPR[1] = plannedRatios[1]; prevIterationPR[2] = plannedRatios[2]; prevIterationPR[3] = plannedRatios[3];
+            }
+        }
+        
+
+        //Apply friction-impulses of all wheels
+        Vector3 angularVelChange = Vector3.zero;
+        Vector3 directionalVelChange = Vector3.zero;
+        for (int i = 0; i < 4; i++)
+        {
+            angularVelChange += plannedRatios[i] * impulseProperties[i].maxW;
+            directionalVelChange += plannedRatios[i] * impulseProperties[i].maxVDir * impulseProperties[i].vDirection;
+
+            Debug.DrawRay(posToApplyForce[i] + transform.up * 0.05f, impulseProperties[i].maxV * impulseProperties[i].vDirection * 0.5f, Color.blue);
+            //onlyForDebug
+            //float vFromOtherWheels = maxsConversionsToMyV[i, 0] * plannedRatios[0] + maxsConversionsToMyV[i, 1] * plannedRatios[1] + maxsConversionsToMyV[i, 2] * plannedRatios[2] + maxsConversionsToMyV[i, 3] * plannedRatios[3];
+            //Debug.Log("estimatedV[" + i + "] with ratio " + plannedRatios[i] + ", slideSpeed="+slideSpeeds[i] +", selfV="+ impulseProperties[i].maxV * plannedRatios[i] +", vFromOthers="+ vFromOtherWheels +",   ->v: "+ (impulseProperties[i].maxV * plannedRatios[i]+ vFromOtherWheels- slideSpeeds[i]));
+        }
+        //Debug.Log("planned Ratios: " + plannedRatios[0] + ", " + plannedRatios[1] + ", " + plannedRatios[2] + ", " + plannedRatios[3]);
+        //Debug.Log("angularChange= " + angularVelChange + ",   directionalChange=" + directionalVelChange);
+        //rb.AddTorque(new Vector3(angularVelChange.x*inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
+        //local
+        rb.AddRelativeTorque(new Vector3(angularVelChange.x * inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
+        rb.AddForce(directionalVelChange * rb.mass, ForceMode.Impulse);
+    }
 
 
 
@@ -1236,6 +1200,7 @@ public class Car : MonoBehaviour
         springCompressions = new float[] {0,0,0,0};
         collidedGroundType = new int[] { 0, 0, 0, 0 }; //0 = no; 1 = solidGround; 2 = looseGround
         int numberOfContacts = 0;
+        Vector3 combinedNormalVector = Vector3.zero;
 
         for(int i = 0; i < 4; i++)
         {
@@ -1310,8 +1275,18 @@ public class Car : MonoBehaviour
             }
             Debug.DrawRay(hitPoints[i], hitNormals[i] * springCompressions[i], UnityEngine.Color.green);
             //Debug.Log("Spring compression[" + i + "]= " + springCompressions[i]);
+            combinedNormalVector += hitNormals[i];
         }
         numberOfGroundedWheels = numberOfContacts;
+        if(numberOfContacts == 0)
+        {
+            currentGroundNormal = previouslyAcceptedGroundNormal.normalized;
+        }
+        else
+        {
+            currentGroundNormal = (combinedNormalVector / numberOfContacts).normalized;
+            previouslyAcceptedGroundNormal = currentGroundNormal;
+        }
     }
 
 
@@ -1594,6 +1569,7 @@ public class Car : MonoBehaviour
             rawSteeringAngles[1] = frontSteeringAngle;
             rawSteeringAngles[2] = rearSteeringAngle;
             rawSteeringAngles[3] = rearSteeringAngle;
+            turningRadius = Mathf.Infinity;
         }
         else
         {
@@ -1614,17 +1590,13 @@ public class Car : MonoBehaviour
             rawSteeringAngles[2] = Mathf.LerpUnclamped(rearSteeringAngle, rRearAckermannAngle, ackermanSteering);
             rawSteeringAngles[3] = Mathf.LerpUnclamped(rearSteeringAngle, lRearAckermannAngle, ackermanSteering);
 
+            //Save the dist from Center for Arcady-Steering and Air-Steering
+            float zDistFromCenter = zDistFromFrontWheels - frontRightWheelCenter.z;
+            float distFromCenter = Mathf.Sqrt(zDistFromCenter * zDistFromCenter + xOfTurningCenter * xOfTurningCenter);
+            if (xOfTurningCenter < 0) distFromCenter = -distFromCenter; //negative Radius for turning left
+            turningRadius = distFromCenter;
+
         }
-
-
-
-
-        //rawSteeringAngles[0] = frontSteeringAngle;
-        //rawSteeringAngles[1] = frontSteeringAngle;
-        //rawSteeringAngles[2] = rearSteeringAngle;
-        //rawSteeringAngles[3] = rearSteeringAngle;
-
-
 
         //from the rawSteeringAngle some adjustment towards the sliding direction happens here to get the definite steeringAngle
         for(int i=0; i<4; i++)
@@ -1659,6 +1631,92 @@ public class Car : MonoBehaviour
             Debug.DrawRay(hitPoints[i], rb.rotation * (Quaternion.Euler(0, steeringAngles[i], 0) * Vector3.forward).normalized * 2, Color.white);
         }
     }
+
+    void ApplyArcadySteeringOrAirSteering()
+    {
+        //use the air steering or arcady steering depending if at least one wheel is on the ground. Nothing needs to be done here if the possible change is set to 0
+        float usedMaxAngularChangePerSecond = numberOfGroundedWheels == 0 ? maxAnglesPSChangeAtAirSteering : maxAnglesPSChangeAtArcadySteering;
+        if (usedMaxAngularChangePerSecond == 0) return;
+
+        Vector3 velocityWithoutLocalYSpeed = rb.velocity - Vector3.Dot(rb.velocity, rb.rotation * Vector3.up) * (rb.rotation * Vector3.up);
+        float fowardOrBackward = Vector3.Dot(rb.velocity, rb.rotation * Vector3.forward)<0? -1:1;
+
+
+
+        float wantedRotationInRadiansPerSecond;
+        if(turningRadius == Mathf.Infinity)
+        {
+            wantedRotationInRadiansPerSecond = 0;
+        }
+        else
+        {
+            wantedRotationInRadiansPerSecond = velocityWithoutLocalYSpeed.magnitude* fowardOrBackward / turningRadius;
+        }
+
+        Debug.Log("foward used = " + velocityWithoutLocalYSpeed.magnitude * fowardOrBackward);
+        Debug.Log("radius used = " + turningRadius);
+        Debug.Log("wantedRotationInRadiansPerSecond = " + wantedRotationInRadiansPerSecond);
+
+        float currentLocalYRoation = (transform.InverseTransformDirection(rb.angularVelocity).normalized * rb.angularVelocity.magnitude).y;
+        Debug.Log("currentLocalYRoation = " + currentLocalYRoation);
+        float plannedAPSChange = wantedRotationInRadiansPerSecond - currentLocalYRoation;
+        float maxRPSChangeThisFrame = usedMaxAngularChangePerSecond * Time.fixedDeltaTime * Mathf.Deg2Rad;
+        plannedAPSChange = Mathf.Clamp(plannedAPSChange, -maxRPSChangeThisFrame, maxRPSChangeThisFrame);
+
+        Vector3 angularVelocityToChange = transform.TransformDirection(Vector3.up).normalized * plannedAPSChange;
+
+        rb.angularVelocity += angularVelocityToChange;
+    }
+
+    void ApplyTurnUpwards()
+    {
+        //The car is only turned upwards if a wheel or the cars collider is in contact with the ground
+        if(numberOfGroundedWheels == 0 && lastContactWithGround > Time.fixedDeltaTime) { return; }
+
+        TurnUpwardsField usedTurnAction = numberOfGroundedWheels == 0 ? TurnUpwardsWithZeroWheels : numberOfGroundedWheels < 3 ? TurnUpwardsWithOneOrTwoWheels : TurnUpwardsWithThreeOrFourWheels;
+        rb.velocity -= currentGroundNormal * usedTurnAction.downwardAcceleration * Time.fixedDeltaTime;
+
+        //no speed change means the rotation correction is deactivated
+        if (usedTurnAction.maxRotSpeedChange == 0) return;
+
+        float offAngleFromNormalInDegree = Vector3.SignedAngle(currentGroundNormal, transform.up, transform.forward);
+        Debug.Log("offAngle = " + offAngleFromNormalInDegree);
+
+        //the correction does not happen, when the car is already turend upwards enough;
+        if (Mathf.Abs(offAngleFromNormalInDegree) <= usedTurnAction.toleratedAngle) return;
+
+        float currentLocalZRoation = (transform.InverseTransformDirection(rb.angularVelocity).normalized * rb.angularVelocity.magnitude).z;
+        Debug.Log("curretn local z rot = " + currentLocalZRoation);
+        float correctionDir = offAngleFromNormalInDegree > 0 ? -1 : 1;
+        float maxRotSpeedInRadiants = usedTurnAction.maxRotSpeed * Mathf.Deg2Rad;
+
+        //nothing needs to be done when the car is already rotating with the maximum rotaiton speed or faster into the wanted direction
+        if (currentLocalZRoation * correctionDir >= maxRotSpeedInRadiants) return;
+
+        float plannedZRotationChange = usedTurnAction.maxRotSpeedChange * Mathf.Deg2Rad * correctionDir * Time.fixedDeltaTime;
+
+        if(offAngleFromNormalInDegree > 0)
+        {
+            if(currentLocalZRoation + plannedZRotationChange < -maxRotSpeedInRadiants)
+            {
+                //when having a positive OffSet and therefore a negative Correction, the negative correction plus the current rotation should not acceed the maximum negative Rotation
+                plannedZRotationChange = -maxRotSpeedInRadiants - currentLocalZRoation;
+            }
+        }
+        else
+        {
+            //when having a negative OffSet and therefore a positive Correction, the positive correction plus the current rotation should not acceed the maximum positive Rotation
+            if (currentLocalZRoation + plannedZRotationChange > maxRotSpeedInRadiants)
+            {
+                plannedZRotationChange = maxRotSpeedInRadiants - currentLocalZRoation;
+            }
+        }
+
+        Vector3 angularVelocityToChange = transform.TransformDirection(Vector3.forward).normalized * plannedZRotationChange;
+        rb.angularVelocity += angularVelocityToChange;
+    }
+
+
 
     void ManageGearShiftInput(float currentSpeed)
     {
@@ -1866,6 +1924,7 @@ public class Car : MonoBehaviour
 
     void ManageAudioAndGUI(int currentGear, float currentWheelSpinSpeed, float currentSpeed)//toTo: Rückwärtsgang   
     {
+        //Audio
         if (audioForEngine == null) return;
         bool isInNegativeGear = currentGear < 0;
         if(currentGear <0) currentGear = 0;
@@ -1903,6 +1962,16 @@ public class Car : MonoBehaviour
         audioForEngine.pitch = totalPitch;
         audioForEngine.volume = totalVolume;
 
+        //Sliding Tire Sound and Smoke
+        for(int i= 0; i < 4; i++)
+        {
+            int dir = fowardSpeedOverGroundAtWheel[i] > currentWheelSpinningSpeeds[i] ? 1 : -1;
+            float slipRatio = GetSlipRatio(fowardSpeedOverGroundAtWheel[i], sideSlideSpeeds[i], currentWheelSpinningSpeeds[i], dir).slilpRatio;
+
+        }
+
+
+        //GUI
         if (guiSliderForShifting != null)
         {
             float shownValue = 0.5f + 0.25f * pitchRawChange;
@@ -2333,24 +2402,6 @@ public class Car : MonoBehaviour
 
             if (doInstantCorrection && timeToContact > 0.7f)
             {
-                //caculation for instant angular Velocity change
-                //float rotMagnitudeDone = rb.angularVelocity.magnitude * Mathf.Rad2Deg * timeToContact;
-                //Quaternion rotChangeWithCurrentAngVel = Quaternion.AngleAxis(rotMagnitudeDone, rb.angularVelocity.normalized);
-                //Quaternion rotOnArrivalWithCurretnAV = rotChangeWithCurrentAngVel * rb.rotation;
-
-                //float estimadedYRotOnArival = rotOnArrivalWithCurretnAV.eulerAngles.y;
-                //float AdaptationForWantedXRot = Vector3.Angle(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal) - 90;
-                //Quaternion aimedRotation = Quaternion.Euler(AdaptationForWantedXRot, 0, 0) * Quaternion.LookRotation(Quaternion.Euler(0, estimadedYRotOnArival, 0) * Vector3.forward, contactNormal);
-                //TEST FOR BETTER LANDING
-                //Vector3 aimedforward = Vector3.Cross(rotOnArrivalWithCurretnAV * Vector3.right, contactNormal);
-                //Quaternion aimedRotation = Quaternion.LookRotation(aimedforward, contactNormal);
-
-                //visual debugging
-                //if (visualDebugCar != null)
-                //{
-                //    visualDebugCar.SetPositionAndRotation(coaseImpactPos, aimedRotation);
-                //}
-
                 //since expectedToWantedRot * rotOnArrivalWithCurretnAV = aimedRotation
                 Quaternion expextedToWantedRot = aimedRotation * Quaternion.Inverse(rotOnArrivalWithCurretnAV);
                 Quaternion wantedAngularVelQuaternion = expextedToWantedRot * rotChangeWithCurrentAngVel;
@@ -2408,7 +2459,7 @@ public class Car : MonoBehaviour
         {
             lastContactWithGround += Time.fixedDeltaTime;
         }
-        if (lastContactWithGround > Time.fixedDeltaTime * 4)
+        if (lastContactWithGround > Time.fixedDeltaTime * 2)
         {
             timeInAir += Time.fixedDeltaTime;
             if (!triggeredGroundLeftAlready)
@@ -2431,21 +2482,8 @@ public class Car : MonoBehaviour
             timeInAir = 0;
             triggeredGroundLeftAlready = false;
             justLeftGround = false;
+            previouslyAcceptedGroundNormal = collision.contacts[0].normal;
         }
-    }
-
-
-
-
-    //TESTMETHODE SPÄTER LÖSCHEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    Vector3 QuaternionToEulerAngles(Quaternion q)
-    {
-        // Umrechung von Quaternion zu Euler-Winkel
-        float roll = Mathf.Atan2(2f * (q.w * q.x + q.y * q.z), 1f - 2f * (q.x * q.x + q.y * q.y)) * Mathf.Rad2Deg;
-        float pitch = Mathf.Asin(2f * (q.w * q.y - q.z * q.x)) * Mathf.Rad2Deg;
-        float yaw = Mathf.Atan2(2f * (q.w * q.z + q.x * q.y), 1f - 2f * (q.y * q.y + q.z * q.z)) * Mathf.Rad2Deg;
-
-        return new Vector3(roll, pitch, yaw);
     }
 }
 

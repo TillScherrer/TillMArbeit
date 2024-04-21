@@ -4,7 +4,10 @@ using UnityEngine.Splines;
 public class GravitySpline : MonoBehaviour
 {
     [SerializeField] float range = 5;
-    [SerializeField] float gravityTowardsSpline = 5;
+    [SerializeField] float splineGravity = -9.81f;
+    [SerializeField]
+    [Tooltip("Usualy the gravity points to the spline-knots up Vector for a flat 3D-Spline. With this option activated you can create a tube shaped 3D-Spline and create gravity towards its center (or away from the center)")]
+    bool gravityTowardsSplineCenter = false;
 
     //WARNING: too high accuracy or number of iterations creates rounding to zero, resulting in an endless loop; accuracy of 20 with 4 iterations is save
     readonly int accuracy = 20; //needs at least 2, low accuracy with high iterations would be very efficient, but increase the chance to miss a global minimum for a local minimum
@@ -17,7 +20,7 @@ public class GravitySpline : MonoBehaviour
     {
         spline = GetComponent<SplineContainer>();
 
-        if(gravityTowardsSpline == 0)
+        if(splineGravity == 0)
         {
             Debug.LogError("spline Gravity is not allowed to be zero! (it is allowed to be negative through)");
         }
@@ -45,6 +48,7 @@ public class GravitySpline : MonoBehaviour
     public (bool isInRange, float distance, Vector3 gravity) EvaluateGravityOnPoint(Vector3 fromPos)
     {
         Vector3 closestPos = Vector3.positiveInfinity;
+        Vector3 upVectorDir = Vector3.zero;
 
         float totalShortestDist = Mathf.Infinity;
 
@@ -93,13 +97,14 @@ public class GravitySpline : MonoBehaviour
             {
                 totalShortestDist = shortestDist;
                 closestPos = transform.TransformPoint(sp.EvaluatePosition(tOfBest));
+                upVectorDir = sp.EvaluateUpVector(tOfBest);
             }
             
         }
 
-        Vector3 fromPosToClosestPoint = closestPos - fromPos;
-        Vector3 gravity = fromPosToClosestPoint.normalized * gravityTowardsSpline;
-        float distance = fromPosToClosestPoint.magnitude;
+        Vector3 fromClosestPointToReceiverPos = fromPos - closestPos;
+        Vector3 gravity = gravityTowardsSplineCenter ? fromClosestPointToReceiverPos.normalized * splineGravity : upVectorDir.normalized * splineGravity;
+        float distance = fromClosestPointToReceiverPos.magnitude;
         bool isInRange = distance <= range;
 
 
