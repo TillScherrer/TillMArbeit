@@ -16,14 +16,6 @@ public class CameraFollow : MonoBehaviour
     CinemachineVirtualCamera cam;
     CustomGravityReciver customGravity;
     float prevZRot = 0;
-    //private Quaternion previousCameraRotation;
-
-
-    private void Awake()
-    {
-        //player = GameObject.FindGameObjectWithTag("Player").transform;
-        //cameraPreRot = transform.rotation;
-    }
 
     private void Start()
     {
@@ -44,12 +36,11 @@ public class CameraFollow : MonoBehaviour
         float distToCarInGravityDir = Vector3.Dot(gravity.normalized, camToCar);
         Vector3 camToCarInGravityDir = gravity.normalized * distToCarInGravityDir;
         float distToPlayerWithoutLocalYDiff = (camToCar - camToCarInGravityDir).magnitude;
-        //float distToPlayerWithoutLocalYDiff = Mathf.Sqrt(camToCar.x * camToCar.x + camToCar.z * camToCar.z);
 
         Vector3 carVelocity = rb.velocity;
         float driveDirToCamAngle = Vector2.SignedAngle(new Vector2(carVelocity.x, carVelocity.z), new Vector2(camToCar.x, camToCar.z));
         //make cam dodge to its right when the angle is negative and to its left when its positive (only needed for small angles)
-        float scale = Mathf.Abs(driveDirToCamAngle) / 180f;//Mathf.Sqrt(Mathf.Abs(driveDirToCamAngle))/ Mathf.Sqrt(180);
+        float scale = Mathf.Abs(driveDirToCamAngle) / 180f;
         int angleSign = driveDirToCamAngle > 0 ? 1 : -1;
         transform.position += transform.rotation * Vector3.left * angleSign * Time.deltaTime * rb.velocity.magnitude * scale * 2.5f;
 
@@ -58,7 +49,6 @@ public class CameraFollow : MonoBehaviour
 
         if (distToPlayerWithoutLocalYDiff > maximumDistance)
         {
-            //transform.position = Vector3.MoveTowards(transform.position, new Vector3(player.position.x, transform.position.y, player.position.z), (horzDistToPlayer - maximumDistance) * (Time.deltaTime < 1f / 20 ? Time.deltaTime : 1f / 20) * camFollowSpeed);
             transform.position = Vector3.MoveTowards(transform.position, player.position - camToCarInGravityDir, (distToPlayerWithoutLocalYDiff - maximumDistance) * (Time.deltaTime < 1f / 20 ? Time.deltaTime : 1f / 20) * camFollowSpeed);
         }
         else if (distToPlayerWithoutLocalYDiff < minimumDistance)
@@ -70,22 +60,11 @@ public class CameraFollow : MonoBehaviour
 
         }
 
-
-
         float currentLocalY = Vector3.Dot(camToCar, gravity.normalized);
-
         float updatedLocalY = Mathf.Lerp(yDistToPlayer, currentLocalY, Mathf.Pow(0.65f, Time.deltaTime));//reaches 35% of plannedHeight over 1 second
 
         Vector3 posWithZeroLocalY = transform.position + currentLocalY * gravity;
         transform.position = posWithZeroLocalY - updatedLocalY * gravity;
-        //transform.position = new Vector3(transform.position.x, updatedLocalY, transform.position.z);
-
-        //Debug.Log("cam Update4");
-
-       
-
-
-
 
         float wantedZRot = Quaternion.LookRotation(camToCar, -gravity).eulerAngles.z;
         if (wantedZRot > 180) wantedZRot -= 360;
@@ -103,15 +82,12 @@ public class CameraFollow : MonoBehaviour
         cam.m_Lens.Dutch = updatedRot > 180 ? updatedRot - 360 : updatedRot < -180 ? updatedRot + 360 : updatedRot;
         prevZRot = updatedRot;
 
-
-
         //adapt FOV
         float speedInGravityDir = Vector3.Dot(gravity.normalized, rb.velocity);
         float speedWithoutLocalY = (rb.velocity - gravity.normalized * distToCarInGravityDir).magnitude;
         float plannedFOVwidth = speedWithoutLocalY < 2 ? 45 : 45 + (Mathf.Sqrt(speedWithoutLocalY - 2) * 5);
         cam.m_Lens.FieldOfView = plannedFOVwidth;
     }
-
 
 
     private Vector3 CalculateMinimumPoint(Vector3 p)

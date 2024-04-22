@@ -24,26 +24,7 @@ public class GravitySpline : MonoBehaviour
         {
             Debug.LogError("spline Gravity is not allowed to be zero! (it is allowed to be negative through)");
         }
-
-        Debug.Log("transform poin 000 to " + transform.TransformPoint(Vector3.zero));
     }
-
-    // Update is called once per frame
-    //void Update()
-    //{
-    //    //Vector3 pos;
-    //    for(float t = 0; t<=1; t+=0.01f)
-    //    {
-    //        //pos = spline.EvaluatePosition(t);
-    //        Debug.DrawRay(spline.EvaluatePosition(t), Vector3.up);
-    //        Debug.Log(spline.EvaluatePosition(t));
-    //    }
-
-
-        
-    //}
-
-
 
     public (bool isInRange, float distance, Vector3 gravity) EvaluateGravityOnPoint(Vector3 fromPos)
     {
