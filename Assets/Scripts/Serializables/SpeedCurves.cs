@@ -21,9 +21,6 @@ public class CurveHolder
     [HideInInspector]
     public virtual int Orientation { get { return 0; } } //start hight added to value
 
-    //[HideInInspector]
-    //public float curveIntegral = 0.5f;
-    //private readonly float accuracyOfIntegral = 30f;
 
     [HideInInspector]
     public float[] rawAccelerationValues;
@@ -31,12 +28,10 @@ public class CurveHolder
 
     public float GetAccelerationValueForSpeed(float speed)
     {
-        //BEDINGUNG BEI SPEED UNTER 0 FEHLT!!!!!!!!!!!!!!!!!!!!!!!
-        //if(speed<0) return rawAccelerationValues[0]; //TEMPORARY SOLUTION, MIGHT BE REPLACED WITH BREAKING WHILE BACKWARDS DRIVING
         speed = Mathf.Abs(speed);
         if (speed > topSpeed) return 0;
         float timeInCurve = GetTimeInCurve(speed);
-        //Debug.Log("time in curve= " + timeInCurve);
+
         float sampleValue = timeInCurve * (accuracyOfAccelerationValues + 1);
         int fromSample = Mathf.FloorToInt(sampleValue);
         int toSample = Mathf.CeilToInt(sampleValue);
@@ -46,7 +41,7 @@ public class CurveHolder
         //Debug.Log("to sample= " + toSample);
         //Debug.Log("accel at sample= " + rawAccelerationValues[fromSample]);
         float scaleBetween = sampleValue - fromSample; //scale from 0 to 1 between the two samples
-        return Mathf.Lerp(rawAccelerationValues[fromSample], rawAccelerationValues[toSample], scaleBetween)*topSpeed/timeNeeded;
+        return Mathf.Lerp(rawAccelerationValues[fromSample], rawAccelerationValues[toSample], scaleBetween) * topSpeed / timeNeeded;
     }
 
     public float GetTimeInCurve(float speed)
@@ -59,11 +54,11 @@ public class CurveHolder
     {
         //with an accuracy of 100 there are 101 samples from 0/100 to 100/100 on the curve
         //sample zero is the speed difference to the first one. Every other sample is the speed difference to the previouse one.
-        rawAccelerationValues = new float[accuracyOfAccelerationValues+1];
+        rawAccelerationValues = new float[accuracyOfAccelerationValues + 1];
         rawAccelerationValues[0] = (curve.Evaluate((float)1 / accuracyOfAccelerationValues) - curve.Evaluate((float)(0) / accuracyOfAccelerationValues)) * accuracyOfAccelerationValues;
         for (int i = 1; i <= accuracyOfAccelerationValues; i++)
         {
-            rawAccelerationValues[i] = (curve.Evaluate((float)i / accuracyOfAccelerationValues)- curve.Evaluate((float)(i-1) / accuracyOfAccelerationValues)) * accuracyOfAccelerationValues;
+            rawAccelerationValues[i] = (curve.Evaluate((float)i / accuracyOfAccelerationValues) - curve.Evaluate((float)(i - 1) / accuracyOfAccelerationValues)) * accuracyOfAccelerationValues;
             //Debug.Log("raw accel value [" + i + "] = " + rawAccelerationValues[i]);
         }
     }
@@ -137,48 +132,6 @@ public class CurveHolder
 
     }
 
-    //public float GetSpeedByTime(float time)
-    //{
-    //    float unscaledValue;
-    //    if (time < 0)
-    //    {
-    //        unscaledValue = curve.keys[0].value + curve.keys[0].outTangent * time;
-    //    }
-    //    else if (time > 1)
-    //    {
-    //        unscaledValue = curve.keys[curve.length - 1].value + curve.keys[curve.length - 1].inTangent * (time - 1);
-    //    }
-    //    else
-    //    {
-    //        unscaledValue = curve.Evaluate(time);
-    //    }
-    //    return unscaledValue * AverageSpeed / curveIntegral;
-    //}
-
-    //public float GetTimeBySpeed(float speed)
-    //{
-    //    float speedScaledToCurve = speed / AverageSpeed * curveIntegral;
-
-    //    if ((speedScaledToCurve < invertedCurve.keys[0].time)) //speed is on left side out of defined range
-    //    {
-    //        Keyframe firstKey = invertedCurve.keys[0];
-    //        return firstKey.value + (speedScaledToCurve - firstKey.time) * firstKey.outTangent;
-    //    }
-    //    else if ((speedScaledToCurve > invertedCurve.keys[invertedCurve.length - 1].time))//speed is on right side out of defined range
-    //    {
-    //        Keyframe lastKey = invertedCurve.keys[invertedCurve.length - 1];
-    //        return lastKey.value + (speedScaledToCurve - lastKey.time) * lastKey.inTangent;
-    //    }
-    //    else//speed within defined range
-    //    {
-    //        return invertedCurve.Evaluate(speedScaledToCurve);
-    //    }
-    //}
-
-    //public void OnValidate()
-    //{
-    //    ValidateCurve();
-    //}
 
     public virtual void ValidateCurve()
     {
@@ -315,110 +268,7 @@ public class CurveHolder
         CreateInvertedCurve();
         ValidateRawAccelerationValues();
     }
-
-    //public void ValidateCurveIntegral()
-    //{
-    //    float speedHeap = 0;
-    //    float stepByAccuracy = 1 / accuracyOfIntegral;
-    //    float halfStepByAccuray = 0.5f / accuracyOfIntegral;
-
-    //    for (float f = 0; f < 1; f += stepByAccuracy)
-    //    {
-    //        speedHeap += curve.Evaluate(f + halfStepByAccuray);
-    //    }
-    //    curveIntegral = Mathf.Abs(speedHeap / accuracyOfIntegral);
-    //}
-
-    //void UpdateAutocalculatedVar()
-    //{
-    //    switch (autoCalculate)
-    //    {
-    //        case AutoCalculate.TimeNeeded:
-    //            timeNeeded = distance / topSpeed / curveIntegral;
-    //            break;
-    //        case AutoCalculate.Distance:
-    //            distance = topSpeed * timeNeeded * curveIntegral;
-    //            break;
-    //        case AutoCalculate.TopSpeed:
-    //            topSpeed = distance / timeNeeded / curveIntegral;
-    //            break;
-    //    }
-    //}
 }
-
-
-
-//[Serializable]
-//public class Jump : CurveHolder
-//{
-
-//    //[HideInInspector]
-//    //public float jumpPower;
-
-
-//    public override bool Rising { get { return false; } }
-
-//    public bool useTopSpeedToStartJump = true;
-//    public SpeedConverterXYToXY speedConvertionOnJumpStart;
-//    public int useFallWithIndex = 0;
-//    [HideInInspector]
-//    public virtual bool IsCustomJump { get { return false; } }
-
-//    override public void ValidateCurve()
-//    {
-//        base.ValidateCurve();
-//        if (useTopSpeedToStartJump) speedConvertionOnJumpStart.ySpeed.addYSpeed = topSpeed;
-//    }
-//}
-
-//[Serializable]
-//public class CustomJump : Jump
-//{
-//    [Space(7)]
-//    public ActionDisabler[] DisabledActionsOnJumpStart;
-//    public ControlDisabler[] DisabledControlsOnJumpStart;
-
-//    [Space(7)]
-//    public bool doesSelectNextJump = false;
-//    public ChooseNextJumpFrom chooseNextJumpFrom = ChooseNextJumpFrom.UsualJumps;
-//    public int indexOfNextJump = 0;
-//    [HideInInspector]
-//    public override bool IsCustomJump { get { return true; } }
-//    public enum ChooseNextJumpFrom
-//    {
-//        UsualJumps,
-//        CustomJumps
-//    }
-
-//    override public void ValidateCurve()
-//    {
-//        base.ValidateCurve();
-//        foreach (ActionDisabler ad in DisabledActionsOnJumpStart)
-//        {
-//            ad.ValidateActionDisabler();
-//        }
-//        foreach (ControlDisabler cd in DisabledControlsOnJumpStart)
-//        {
-//            cd.ValidateControlDisabler();
-//        }
-//    }
-//}
-
-//[Serializable]
-//public class Fall : CurveHolder
-//{
-//    public override int Orientation { get { return -1; } }
-//    public bool useTopSpeedAsMaxFallingSpeed = true;
-//    public float maxFallingSpeed = 30f;
-//    public float slowDownOverMaxSpeed = 5f;
-//    override public void ValidateCurve()
-//    {
-//        base.ValidateCurve();
-//        if (maxFallingSpeed < 0.01f) maxFallingSpeed = 0.01f;
-//        if (useTopSpeedAsMaxFallingSpeed) maxFallingSpeed = topSpeed;
-//    }
-
-//}
 
 [Serializable]
 public class SpeedupCurve : CurveHolder
@@ -436,13 +286,5 @@ public class SlowdownCurve : CurveHolder
     public override bool Rising { get { return false; } }
 
 }
-
-//[Serializable]
-//public enum AutoCalculate
-//{
-//    TimeNeeded,
-//    Distance,
-//    TopSpeed
-//}
 
 

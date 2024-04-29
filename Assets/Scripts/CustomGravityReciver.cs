@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,25 +10,27 @@ public class CustomGravityReciver : MonoBehaviour
     Vector3 basicGravity = new Vector3(0,-9.81f,0);
 
     [SerializeField]
-    float towardsGroundNormalGravity = 9.81f;
-
-    [SerializeField]
-    bool ignoreBaseGravityWithinGroundNormalGravity = true;
-
-    [SerializeField]
     GravitySplineManager gravitySplineManager;
     [SerializeField]
     bool useGravitySplines = true;
     [SerializeField]
     bool ignoreBaseGravityWithinGravitySpline = true;
+
     [SerializeField]
-    bool ignoreGroundNormalGravityWithinGravitySpline = true;
+    [Tooltip("When the Gravity changes, the same direction change is applied to your velocity. Extreme gravity changes do not trigger this")]
+    bool curveSpace = false;
+
 
     Vector3 currentCustomGravity = Vector3.zero;
 
     Rigidbody rb;
 
+
+    Vector3 previousGravityDir = Physics.gravity;
+
+
     public Vector3 CurrentCustomGravity { get => currentCustomGravity;}
+    public bool CurveSpace { get => curveSpace;}
 
     // Start is called before the first frame update
     void Start()
@@ -59,6 +62,18 @@ public class CustomGravityReciver : MonoBehaviour
     {
         currentCustomGravity = GetGravityAtMyCurrentPosition();
         rb.velocity += currentCustomGravity * Time.fixedDeltaTime;
+
+
+
+        if (curveSpace)
+        {
+            float angle = Vector3.Angle(previousGravityDir, currentCustomGravity);
+            if (angle != 0 && angle < 10)
+            {
+                rb.velocity = Quaternion.FromToRotation(previousGravityDir, currentCustomGravity) * rb.velocity;
+            }
+        }
+        previousGravityDir = currentCustomGravity.normalized;
     }
 
 
@@ -72,7 +87,6 @@ public class CustomGravityReciver : MonoBehaviour
         Vector3 gravity = Vector3.zero;
 
         bool useBaseGravity = true;
-        bool useGroundNormalGravity = true;
 
         // conditionally apply gravity spline gravity
         if (useGravitySplines)
@@ -84,23 +98,6 @@ public class CustomGravityReciver : MonoBehaviour
             {
                 gravity += splineGravity;
                 useBaseGravity = !ignoreBaseGravityWithinGravitySpline;
-                useGroundNormalGravity = !ignoreGroundNormalGravityWithinGravitySpline;
-            }
-        }
-
-        // conditionally apply ground normal gravity
-        if (useGroundNormalGravity && towardsGroundNormalGravity!=0)
-        {
-            (bool foundGroudnNormal, Vector3 gravity) groundNormalGravity = SearchForGroundNormalGravity(position);
-
-            if (groundNormalGravity.foundGroudnNormal)
-            {
-                gravity += groundNormalGravity.gravity;
-
-                if(useBaseGravity == true)
-                {
-                    useBaseGravity = !ignoreBaseGravityWithinGroundNormalGravity;
-                }
             }
         }
 
@@ -113,19 +110,4 @@ public class CustomGravityReciver : MonoBehaviour
         Debug.DrawRay(position, gravity, Color.black);
         return gravity;
     }
-
-
-
-
-    (bool foundGravitySpline, Vector3 gravity) SearchForGroundNormalGravity(Vector3 position)
-    {
-        bool found = false;
-        Vector3 GroundNormalGravity = Vector3.zero;
-        //todo: nach gravity spline suchen
-
-
-
-        return (found, GroundNormalGravity);
-    }
-
 }

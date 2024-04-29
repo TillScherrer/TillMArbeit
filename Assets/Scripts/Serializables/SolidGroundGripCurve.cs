@@ -9,18 +9,18 @@ using UnityEngine;
 public class GripCurve
 {
 
-    public float maxGrip = 2;
+    //public float maxGrip = 2;
 
-    public float definedUpToSlideSpeed = 5;
+    //public float definedUpToSlideSpeed = 5;
 
     public AnimationCurve curve = new AnimationCurve();
 
 
-    public float GetBestSlideSpeed()
-    {
-        //wenn Solid Ground kurve!!!!!!!!
-        return (curve.keys[1].time / definedUpToSlideSpeed);
-    }
+    //public float GetBestSlideSpeed()
+    //{
+    //    //wenn Solid Ground kurve!!!!!!!!
+    //    return (curve.keys[1].time / definedUpToSlideSpeed);
+    //}
 
     public virtual void SetKeyNumber(int keyNumber)
     {
@@ -77,7 +77,7 @@ public class SolidGrounGrip : GripCurve
         else if (k2.value > 0.95f) k2.value = 0.95f;
         if (k2.time < k1.time) k2.time = k1.time+0.02f;
         else if (k2.time > 0.97f) k2.time = 0.97f;
-        k3.time = 2;
+        k3.time = 1;
         if (k3.value < 0.05f) k3.value = 0.05f;
         else if (k3.value > 0.95f) k3.value = 0.95f;
 
@@ -121,18 +121,6 @@ public class LooseGrounGrip : GripCurve
     override public void ValidateCurve()
     {
         SetKeyNumber(2);
-
-        //curve.keys[0].time = 0;
-        
-
-        //float maxTangent = 1 - curve.keys[0].value;
-        //if(curve.keys[0].outTangent > maxTangent) curve.keys[0].outTangent = maxTangent;
-        //if (curve.keys[1].inTangent < -maxTangent) curve.keys[1].inTangent = -maxTangent;
-
-        //if (curve.keys[0].outTangent + curve.keys[0].value > 1) curve.keys[0].outTangent = 1 - curve.keys[0].value;
-        //if (1 - curve.keys[1].inTangent < curve.keys[0].value) curve.keys[0].outTangent = 1 - curve.keys[0].value;
-        //curve.keys[0].outWeight = 0;
-        //curve.keys[1].inWeight = 0;
 
         float minGradient = 0.001f;
         for (int i = 0; i < curve.length; i++)

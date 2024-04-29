@@ -92,8 +92,22 @@ VON CAR:
 
 
 
-
-
+>>>>>>>>>>>>>>>>>>> "PerformInAirBalance(){}"
+        //if(gravityReciver != null)
+        //{
+        .....
+        ...
+        //}
+        //else
+        //{
+        //    //without custom gravity a better and faster flight prediction is possible
+        //    for (int i = 0; i <= numberOfTimesteps; i++)
+        //    {
+        //        moveDirRotAtIndex[i] = Quaternion.LookRotation(rb.velocity + i * timeStepDuration * Physics.gravity, Vector3.up);
+        //        flightPositions[i] = startingCenter + rb.velocity * (float)i * timeStepDuration + 0.5f * Physics.gravity * (float)i * (float)i * timeStepDuration * timeStepDuration;
+        //        if (i > 0) Debug.DrawLine(flightPositions[i - 1], flightPositions[i], Color.black, Time.fixedDeltaTime);
+        //    }
+        //}
 
 
 
