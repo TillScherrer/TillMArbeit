@@ -35,7 +35,7 @@ public class CarEditor : Editor
 
     SerializedProperty showAccelerationSettings;
     SerializedProperty showGearSettings;
-    SerializedProperty showBreakSettings;
+    SerializedProperty showBrakeSettings;
     SerializedProperty showWheelSettings;
     SerializedProperty showBalanceSettings;
     SerializedProperty showGripSetting;
@@ -65,15 +65,15 @@ public class CarEditor : Editor
     SerializedProperty airResistanceExponent;
     SerializedProperty slowByRollFriction;
 
-    //breaking Settings
-    SerializedProperty breakMaxSlowdown;
-    SerializedProperty breakAppliedToFrontWheels;
-    SerializedProperty breakRestrainToOptimiseGrip;
-    SerializedProperty breakLimitedByGrip;
-    SerializedProperty handBreakMaxSlowdown;
-    SerializedProperty handBreakAppliedToFrontWheels;
-    SerializedProperty handBreakRestrainToOptimiseGrip;
-    SerializedProperty handBreakLimitedByGrip;
+    //braking Settings
+    SerializedProperty brakeMaxSlowdown;
+    SerializedProperty brakeAppliedToFrontWheels;
+    SerializedProperty brakeRestrainToOptimiseGrip;
+    SerializedProperty brakeLimitedByGrip;
+    SerializedProperty handBrakeMaxSlowdown;
+    SerializedProperty handBrakeAppliedToFrontWheels;
+    SerializedProperty handBrakeRestrainToOptimiseGrip;
+    SerializedProperty handBrakeLimitedByGrip;
 
 
     //physical wheel-position and spring settings
@@ -158,13 +158,13 @@ public class CarEditor : Editor
     SerializedProperty maxAnglesPSChangeAtAirSteering;
 
     //input
-    //SerializedProperty breakAtOtherDirectionInput; 
+    //SerializedProperty brakAtOtherDirectionInput; 
     SerializedProperty ThrottleKey;
     SerializedProperty BackwardThrottleKey;
     SerializedProperty SteerLeftKey;
     SerializedProperty SteerRightKey;
-    SerializedProperty BreakKey;
-    SerializedProperty HandbreakKey;
+    SerializedProperty BrakKey;
+    SerializedProperty HandbrakeKey;
     SerializedProperty GearShiftKey;
     SerializedProperty GearShiftUpKey;
     SerializedProperty GearShiftDownKey;
@@ -218,7 +218,7 @@ public class CarEditor : Editor
         //foldout bools
         showAccelerationSettings = serializedObject.FindProperty("showAccelerationSettings");
         showGearSettings = serializedObject.FindProperty("showGearSettings");
-        showBreakSettings = serializedObject.FindProperty("showBreakSettings");
+        showBrakeSettings = serializedObject.FindProperty("showBrakeSettings");
         showWheelSettings = serializedObject.FindProperty("showWheelSettings");
         showBalanceSettings = serializedObject.FindProperty("showBalanceSettings");
         showGripSetting = serializedObject.FindProperty("showGripSetting");
@@ -246,15 +246,15 @@ public class CarEditor : Editor
         slowByAirResistanceAt30ms = serializedObject.FindProperty("slowByAirResistanceAt30ms");
         airResistanceExponent = serializedObject.FindProperty("airResistanceExponent");
         slowByRollFriction = serializedObject.FindProperty("slowByRollFriction");
-        //breaking settings
-        breakMaxSlowdown = serializedObject.FindProperty("breakMaxSlowdown");
-        breakAppliedToFrontWheels = serializedObject.FindProperty("breakAppliedToFrontWheels");
-        breakRestrainToOptimiseGrip = serializedObject.FindProperty("breakRestrainToOptimiseGrip");
-        breakLimitedByGrip = serializedObject.FindProperty("breakLimitedByGrip");
-        handBreakMaxSlowdown = serializedObject.FindProperty("handBreakMaxSlowdown");
-        handBreakAppliedToFrontWheels = serializedObject.FindProperty("handBreakAppliedToFrontWheels");
-        handBreakRestrainToOptimiseGrip = serializedObject.FindProperty("handBreakRestrainToOptimiseGrip");
-        handBreakLimitedByGrip = serializedObject.FindProperty("handBreakLimitedByGrip");
+        //braking settings
+        brakeMaxSlowdown = serializedObject.FindProperty("brakeMaxSlowdown");
+        brakeAppliedToFrontWheels = serializedObject.FindProperty("brakeAppliedToFrontWheels");
+        brakeRestrainToOptimiseGrip = serializedObject.FindProperty("brakeRestrainToOptimiseGrip");
+        brakeLimitedByGrip = serializedObject.FindProperty("brakeLimitedByGrip");
+        handBrakeMaxSlowdown = serializedObject.FindProperty("handBrakeMaxSlowdown");
+        handBrakeAppliedToFrontWheels = serializedObject.FindProperty("handBrakeAppliedToFrontWheels");
+        handBrakeRestrainToOptimiseGrip = serializedObject.FindProperty("handBrakeRestrainToOptimiseGrip");
+        handBrakeLimitedByGrip = serializedObject.FindProperty("handBrakeLimitedByGrip");
         //front wheel physical position and spring settings
         showWheelSettings = serializedObject.FindProperty("showWheelSettings");
         frontRightWheelCenter = serializedObject.FindProperty("frontRightWheelCenter");
@@ -337,13 +337,13 @@ public class CarEditor : Editor
         maxAnglesPSChangeAtAirSteering = serializedObject.FindProperty("maxAnglesPSChangeAtAirSteering");
 
         //input secttion
-        //breakAtOtherDirectionInput = serializedObject.FindProperty("breakAtOtherDirectionInput");
+        //brakeAtOtherDirectionInput = serializedObject.FindProperty("brakeAtOtherDirectionInput");
         ThrottleKey = serializedObject.FindProperty("ThrottleKey");
         BackwardThrottleKey = serializedObject.FindProperty("BackwardThrottleKey");
         SteerLeftKey = serializedObject.FindProperty("SteerLeftKey");
         SteerRightKey = serializedObject.FindProperty("SteerRightKey");
-        BreakKey = serializedObject.FindProperty("BreakKey");
-        HandbreakKey = serializedObject.FindProperty("HandbreakKey");
+        BrakKey = serializedObject.FindProperty("BrakeKey");
+        HandbrakeKey = serializedObject.FindProperty("HandbrakeKey");
         GearShiftKey = serializedObject.FindProperty("GearShiftKey");
         GearShiftUpKey = serializedObject.FindProperty("GearShiftUpKey");
         GearShiftDownKey = serializedObject.FindProperty("GearShiftDownKey");
@@ -520,23 +520,23 @@ public class CarEditor : Editor
 
         //Deceleration
         DrawNextSectionAndClosePreviouse(ref sectionCount);
-        showBreakSettings.boolValue = EditorGUILayout.Foldout(showBreakSettings.boolValue, "Deceleration");
-        if (showBreakSettings.boolValue)
+        showBrakeSettings.boolValue = EditorGUILayout.Foldout(showBrakeSettings.boolValue, "Deceleration");
+        if (showBrakeSettings.boolValue)
         {
             //braking
             EditorGUILayout.LabelField("Braking", EditorStyles.miniBoldLabel);
-            breakMaxSlowdown.floatValue = EditorGUILayout.FloatField("break deceleration", breakMaxSlowdown.floatValue);
-            DrawRearFrontSlider(ref breakAppliedToFrontWheels);
-            breakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", breakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
-            breakLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Breake limited by Grip", breakLimitedByGrip.floatValue * 100, 0, 100) / 100;
+            brakeMaxSlowdown.floatValue = EditorGUILayout.FloatField("brake deceleration", brakeMaxSlowdown.floatValue);
+            DrawRearFrontSlider(ref brakeAppliedToFrontWheels);
+            brakeRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", brakeRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
+            brakeLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Brake limited by Grip", brakeLimitedByGrip.floatValue * 100, 0, 100) / 100;
             GUILayout.Space(10);
 
             //handbrake
-            EditorGUILayout.LabelField("Handbreak", EditorStyles.miniBoldLabel);
-            handBreakMaxSlowdown.floatValue = EditorGUILayout.FloatField("handbreak deceleration", handBreakMaxSlowdown.floatValue);
-            DrawRearFrontSlider(ref handBreakAppliedToFrontWheels);
-            handBreakRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", handBreakRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
-            handBreakLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Breake limited by Grip", handBreakLimitedByGrip.floatValue * 100, 0, 100) / 100;
+            EditorGUILayout.LabelField("Handbrake", EditorStyles.miniBoldLabel);
+            handBrakeMaxSlowdown.floatValue = EditorGUILayout.FloatField("handbrake deceleration", handBrakeMaxSlowdown.floatValue);
+            DrawRearFrontSlider(ref handBrakeAppliedToFrontWheels);
+            handBrakeRestrainToOptimiseGrip.floatValue = EditorGUILayout.Slider("(%) Restrain to optimise Grip", handBrakeRestrainToOptimiseGrip.floatValue * 100, 0, 100) / 100;
+            handBrakeLimitedByGrip.floatValue = EditorGUILayout.Slider("(%) Brake limited by Grip", handBrakeLimitedByGrip.floatValue * 100, 0, 100) / 100;
             GUILayout.Space(10);
 
             //Permanent deceleration factors
@@ -906,16 +906,16 @@ public class CarEditor : Editor
             lateralAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift lateral-attackpoint", lateralAttackHeightLift.floatValue * 100, 0, 100) / 100;
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where sideward grip applies force at ground height (potentionally flipping the car sideward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height")); //tooltip to previous https://www.reddit.com/r/Unity3D/comments/45bjwc/tooltip_on_custom_inspectorproperties/ by againey
             longitudalAttackHeightLift.floatValue = EditorGUILayout.Slider("(%) Lift longitudal-attackpoint", longitudalAttackHeightLift.floatValue * 100, 0, 100) / 100;
-            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where grip of accelerating and breaking applies force at ground height (potentionally flipping the car foward/backward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height"));
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "0% is a realistic behavior, where grip of accelerating and braking applies force at ground height (potentionally flipping the car foward/backward), whereas 100% prevents this behaviour by lifting the attackpoint to the center of mass's height"));
 
             GUILayout.Space(10);
-            EditorGUILayout.LabelField("Rotate the Car straigt (depending on the number of grounded wheels)", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Straighten the car (depending on the number of grounded wheels)", EditorStyles.miniBoldLabel);
             EditorGUILayout.PropertyField(TurnUpwardsWithZeroWheels);
             EditorGUILayout.PropertyField(TurnUpwardsWithOneOrTwoWheels);
             EditorGUILayout.PropertyField(TurnUpwardsWithThreeOrFourWheels);
 
             GUILayout.Space(10);
-            EditorGUILayout.LabelField("Correct Air Rotation to land straigth:", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Correct Air Rotation to land straight:", EditorStyles.miniBoldLabel);
             minFlightDurationForCorrection.floatValue = EditorGUILayout.FloatField("(s) Start Correction after flight Duration:", minFlightDurationForCorrection.floatValue);
             maxAngularVelCorrectionInAir.floatValue = EditorGUILayout.FloatField("(°/s^2) Max Rotation speed change:", maxAngularVelCorrectionInAir.floatValue);
             EditorGUILayout.PropertyField(fixFlightRotationAtLeavingGround);
@@ -936,13 +936,13 @@ public class CarEditor : Editor
         if (showInputSettings.boolValue)
         {
             EditorGUILayout.LabelField("Input Settings", EditorStyles.boldLabel);
-            //EditorGUILayout.PropertyField(breakAtOtherDirectionInput);
+            //EditorGUILayout.PropertyField(brakeAtOtherDirectionInput);
             EditorGUILayout.PropertyField(ThrottleKey);
             EditorGUILayout.PropertyField(BackwardThrottleKey);
             EditorGUILayout.PropertyField(SteerLeftKey);
             EditorGUILayout.PropertyField(SteerRightKey);
-            EditorGUILayout.PropertyField(BreakKey);
-            EditorGUILayout.PropertyField(HandbreakKey);
+            EditorGUILayout.PropertyField(BrakKey);
+            EditorGUILayout.PropertyField(HandbrakeKey);
             EditorGUILayout.PropertyField(GearShiftKey);
             EditorGUILayout.PropertyField(GearShiftUpKey);
             EditorGUILayout.PropertyField(GearShiftDownKey);
@@ -969,7 +969,7 @@ public class CarEditor : Editor
         GUILayout.Space(15);
 
 
-        //GUI SETTINGS
+        //OVERLAY SETTINGS
         DrawNextSectionAndClosePreviouse(ref sectionCount);
         showOverlaySettings.boolValue = EditorGUILayout.Foldout(showOverlaySettings.boolValue, "Overlay");
         if (showOverlaySettings.boolValue)

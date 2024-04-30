@@ -17,7 +17,7 @@ public class Car : MonoBehaviour
     //foldouts for CarEditor
     [SerializeField] bool showAccelerationSettings;
     [SerializeField] bool showGearSettings;
-    [SerializeField] bool showBreakSettings;
+    [SerializeField] bool showBrakeSettings;
     [SerializeField] bool showWheelSettings;
     [SerializeField] bool showBalanceSettings;
     [SerializeField] bool showGripSetting;
@@ -44,15 +44,15 @@ public class Car : MonoBehaviour
 
 
     //BRAKING
-    //breaking Settings
-    [SerializeField] float breakMaxSlowdown = 10f;
-    [SerializeField] float breakAppliedToFrontWheels = 1f;
-    [SerializeField] float breakRestrainToOptimiseGrip = 1f;
-    [SerializeField] float breakLimitedByGrip = 1f;
-    [SerializeField] float handBreakMaxSlowdown = 20f;
-    [SerializeField] float handBreakAppliedToFrontWheels = 1f;
-    [SerializeField] float handBreakRestrainToOptimiseGrip = 0f;
-    [SerializeField] float handBreakLimitedByGrip = 1f;
+    //braking Settings
+    [SerializeField] float brakeMaxSlowdown = 10f;
+    [SerializeField] float brakeAppliedToFrontWheels = 1f;
+    [SerializeField] float brakeRestrainToOptimiseGrip = 1f;
+    [SerializeField] float brakeLimitedByGrip = 1f;
+    [SerializeField] float handBrakeMaxSlowdown = 20f;
+    [SerializeField] float handBrakeAppliedToFrontWheels = 1f;
+    [SerializeField] float handBrakeRestrainToOptimiseGrip = 0f;
+    [SerializeField] float handBrakeLimitedByGrip = 1f;
     //decceleration Settings
     [SerializeField] float slowByAirResistanceAt30ms = 0.5f;
     [SerializeField] float airResistanceExponent = 2f;
@@ -148,13 +148,13 @@ public class Car : MonoBehaviour
 
 
     //INPUT
-    //[SerializeField] bool breakAtOtherDirectionInput = true;
+    //[SerializeField] bool brakeAtOtherDirectionInput = true;
     [SerializeField] FadingKey ThrottleKey = new FadingKey();
     [SerializeField] FadingKey BackwardThrottleKey = new FadingKey();
     [SerializeField] KeyCode SteerLeftKey = KeyCode.A;
     [SerializeField] KeyCode SteerRightKey = KeyCode.S;
-    [SerializeField] FadingKey BreakKey = new FadingKey();
-    [SerializeField] FadingKey HandbreakKey = new FadingKey();
+    [SerializeField] FadingKey BrakeKey = new FadingKey();
+    [SerializeField] FadingKey HandbrakeKey = new FadingKey();
     [SerializeField] KeyCode GearShiftKey = KeyCode.LeftShift;
     [SerializeField] KeyCode GearShiftUpKey = KeyCode.LeftShift;
     [SerializeField] KeyCode GearShiftDownKey = KeyCode.CapsLock;
@@ -240,7 +240,7 @@ public class Car : MonoBehaviour
     float[] sideSlideSpeeds = new float[4];
     Vector3[] fowardOnGroundAtWheel = new Vector3[4];
     Vector3[] sideSlideDirections = new Vector3[4];
-    //acceleration & breaking
+    //acceleration & braking
     float[] currentWheelSpinningSpeeds = new float[] {0,0,0,0};
     float[] lengthwiseForceAtWheels = new float[] { 0, 0, 0, 0 };
     float[] sidewayGripAtWheels = new float[] { 0, 0, 0, 0 };
@@ -312,22 +312,22 @@ public class Car : MonoBehaviour
             ThrottleKey.IsPressed = (currentAverageWheelSpinningSpeed >= -0.01f) && Input.GetKey(ThrottleKey.KeyboardInput);
             BackwardThrottleKey.IsPressed = (currentAverageWheelSpinningSpeed <= 0.01f) && Input.GetKey(BackwardThrottleKey.KeyboardInput);
             
-            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentAverageWheelSpinningSpeed > 0.01 && Input.GetKey(BackwardThrottleKey.KeyboardInput)) || (currentAverageWheelSpinningSpeed < -0.01 && Input.GetKey(ThrottleKey.KeyboardInput));
-            if (BackwardThrottleKey.IsPressed && BackwardThrottleKey.KeyboardInput == BreakKey.KeyboardInput) BreakKey.IsPressed = false;
+            BrakeKey.IsPressed = Input.GetKey(BrakeKey.KeyboardInput) || (currentAverageWheelSpinningSpeed > 0.01 && Input.GetKey(BackwardThrottleKey.KeyboardInput)) || (currentAverageWheelSpinningSpeed < -0.01 && Input.GetKey(ThrottleKey.KeyboardInput));
+            if (BackwardThrottleKey.IsPressed && BackwardThrottleKey.KeyboardInput == BrakeKey.KeyboardInput) BrakeKey.IsPressed = false;
         }
         else
         {
             ThrottleKey.IsPressed = Input.GetKey(ThrottleKey.KeyboardInput) && ((currentAverageWheelSpinningSpeed >= -0.01f && currentGear > -1) || (currentAverageWheelSpinningSpeed <= 0.01f && currentGear < 0)); //must have right gear for moving direction-
             BackwardThrottleKey.IsPressed = false;
-            BreakKey.IsPressed = Input.GetKey(BreakKey.KeyboardInput) || (currentAverageWheelSpinningSpeed >= 0.01f && currentGear < 0) || (currentAverageWheelSpinningSpeed <= -0.01f && currentGear > -1); ; // -because the wrong gear also counts as breaking
+            BrakeKey.IsPressed = Input.GetKey(BrakeKey.KeyboardInput) || (currentAverageWheelSpinningSpeed >= 0.01f && currentGear < 0) || (currentAverageWheelSpinningSpeed <= -0.01f && currentGear > -1); ; // -because the wrong gear also counts as braking
         }
-        HandbreakKey.IsPressed = Input.GetKey(HandbreakKey.KeyboardInput);
+        HandbrakeKey.IsPressed = Input.GetKey(HandbrakeKey.KeyboardInput);
 
         //make input dynamic (Keyboard gives binary input, which is interpolated over time)
         ThrottleKey.Update();
         BackwardThrottleKey.Update();
-        BreakKey.Update();
-        HandbreakKey.Update();
+        BrakeKey.Update();
+        HandbrakeKey.Update();
         //gear shift input (register manual input or emulate input with automatic gear shift)
         ManageGearShiftInput(currentAverageWheelSpinningSpeed);      
     }
@@ -383,7 +383,7 @@ public class Car : MonoBehaviour
         //GEAR SHIFTING  
         ComputeGearShiftState(); //(input has already been managed in "Update()". Therefor the registered input is computed here)
 
-        //ACCELERATION AND BREAKING
+        //ACCELERATION AND BRAKING
         rb.velocity -= GetAirResistanceSlowdownForSpeedAbs(rb.velocity.magnitude) * Time.fixedDeltaTime * rb.velocity.normalized;
         currentAverageWheelSpinningSpeed = GetAverageWheelSpinningSpeed();
         
@@ -398,26 +398,26 @@ public class Car : MonoBehaviour
         
         float[] maxLengthwiseImpulse = new float[4];
         Vector3[] directionToApplyLengthwiseForce = new Vector3[4];
-        bool[] isBreaking = new bool[4];
+        bool[] isBraking = new bool[4];
         float[] currentMovementAgainstForceDir= new float[4];
         for (int i = 0; i < 4; i++)
         {
             directionToApplyLengthwiseForce[i] = (fowardOnGroundAtWheel[i] * lengthwiseForceAtWheels[i]).normalized;
             maxLengthwiseImpulse[i] = (fowardOnGroundAtWheel[i] * lengthwiseForceAtWheels[i]).magnitude;
-            isBreaking[i] = !canLeadToDirectionChange[i];
+            isBraking[i] = !canLeadToDirectionChange[i];
 
             currentMovementAgainstForceDir[i] = Vector3.Dot(GetActualPointVelocity(hitPointForLongitudal[i]), -directionToApplyLengthwiseForce[i].normalized);
         }
         //apply lengthwise friciton
-        BalanceAndApplyImpulses(hitPointForLongitudal, directionToApplyLengthwiseForce, maxLengthwiseImpulse, currentMovementAgainstForceDir, isBreaking);
+        BalanceAndApplyImpulses(hitPointForLongitudal, directionToApplyLengthwiseForce, maxLengthwiseImpulse, currentMovementAgainstForceDir, isBraking);
 
 
         //SIDEWARD FRICTION
         float[] maxStopImpulse = new float[4];
-        Vector3[] directionToApplyBreakingForce = new Vector3[4];
+        Vector3[] directionToApplyBrakingForce = new Vector3[4];
         for (int i = 0; i < 4; i++)
         {
-            directionToApplyBreakingForce[i] = -sideSlideDirections[i];
+            directionToApplyBrakingForce[i] = -sideSlideDirections[i];
             if (endlessSidewaysGrip)
             {
                 maxStopImpulse[i] = sideSlideSpeeds[i] * rb.mass / 4;
@@ -442,8 +442,8 @@ public class Car : MonoBehaviour
             //Debug.DrawRay(hitPoints[i], sideSlideDirections[i].normalized * -maxStopImpulse[i] / Time.fixedDeltaTime * 0.2f, Color.green);
         }
 
-        bool[] sidewardForceIsABreakingForce = new bool[] {true,true,true,true};
-        BalanceAndApplyImpulses(hitPointForLateral, directionToApplyBreakingForce, maxStopImpulse, sideSlideSpeeds, sidewardForceIsABreakingForce);
+        bool[] sidewardForceIsABrakingForce = new bool[] {true,true,true,true};
+        BalanceAndApplyImpulses(hitPointForLateral, directionToApplyBrakingForce, maxStopImpulse, sideSlideSpeeds, sidewardForceIsABrakingForce);
 
 
         ApplyArcadySteeringOrAirSteering();
@@ -460,6 +460,75 @@ public class Car : MonoBehaviour
     }
 
 
+    //setup methods
+    public void UpdateDependendParameters() //Note: This Method is also called when you make changes in Inspector during play mode
+    {
+        rb = GetComponent<Rigidbody>();
+        gravityReciver = GetComponent<CustomGravityReciver>();
+        usedGravityForSprings = springsByDefaultGravity ? Physics.gravity.magnitude : Mathf.Abs(springsByOtherValue);
+        float distCenterFrontWheel = Mathf.Abs(frontRightWheelCenter.z - rb.centerOfMass.z);
+        float distCenterRearWheel = Mathf.Abs(rearRightWheelCenter.z - rb.centerOfMass.z);
+        float frontSpringWeightRatio = distCenterRearWheel / (distCenterFrontWheel + distCenterRearWheel);
+        float rearSpringWeightRatio = 1 - frontSpringWeightRatio;
+        springAccelerationPerM[0] = usedGravityForSprings * frontSpringWeightRatio * 0.5f / frontWheelSuspensionDistanceToLiftCarWeight;
+        springAccelerationPerM[1] = springAccelerationPerM[0];
+        springAccelerationPerM[2] = usedGravityForSprings * rearSpringWeightRatio * 0.5f / rearWheelSuspensionDistanceToLiftCarWeight;
+        springAccelerationPerM[3] = springAccelerationPerM[2];
+        combinedGroundLayers = solidGround | looseGround;
+        extraEffortForWheelSpin = (1 + 2 * frontWheelRotationHoldsRatioOfSpeed + 2 * rearWheelRotationHoldsRatioOfSpeed);
+    }
+
+    public void UpdateArrayAccessibleParameters(bool calledFromInspector)
+    {
+        wheelCenters = new Vector3[] { frontRightWheelCenter + 2 * Vector3.left * frontRightWheelCenter.x, frontRightWheelCenter, rearRightWheelCenter + 2 * Vector3.left * rearRightWheelCenter.x, rearRightWheelCenter };
+        Vector3 fr3DOffset = Vector3.right * (frontWheelOutwardThickness - frontWheelInwardThickness) / 2;
+        Vector3 br3DOffset = Vector3.right * (rearWheelOutwardThickness - rearWheelInwardThickness) / 2;
+        wheel3DCenters = new Vector3[] { wheelCenters[0] - fr3DOffset, wheelCenters[1] + fr3DOffset, wheelCenters[2] - br3DOffset, wheelCenters[3] + br3DOffset };
+        upwardSuspensionCap = new float[] { frontSuspHardCap, frontSuspHardCap, rearSuspHardCap, rearSuspHardCap };
+        upwardSuspensionCapVec = new Vector3[] { Vector3.up * frontSuspHardCap, Vector3.up * frontSuspHardCap, Vector3.up * rearSuspHardCap, Vector3.up * rearSuspHardCap };
+        looseSpringOffsetLength = new float[] { frontWheelSuspensionDistanceToLiftCarWeight, frontWheelSuspensionDistanceToLiftCarWeight, rearWheelSuspensionDistanceToLiftCarWeight, rearWheelSuspensionDistanceToLiftCarWeight };
+        wheelRadii = new float[] { frontWheelRadius, frontWheelRadius, rearWheelRadius, rearWheelRadius };
+
+        for (int i = 0; i < 4; i++)
+        {
+            wheelCentersStartPoint[i] = wheelCenters[i] + upwardSuspensionCapVec[i] + Vector3.up * wheelRadii[i];
+            wheelCentersEndPoint[i] = wheelCenters[i] + Vector3.down * (looseSpringOffsetLength[i] + wheelRadii[i]);
+            wheel3DCentersStartPoint[i] = wheel3DCenters[i] + upwardSuspensionCapVec[i] + Vector3.up * wheelRadii[i];
+            wheel3DCentersEndPoint[i] = wheel3DCenters[i] + Vector3.down * looseSpringOffsetLength[i];
+            wheel3DThicknesses[i] = i < 2 ? frontWheelInwardThickness + frontWheelOutwardThickness : rearWheelInwardThickness + rearWheelOutwardThickness;
+        }
+
+        if (calledFromInspector && Application.isPlaying) return; //everything after here in this method will not be changed from the inspector during play-Mode
+
+        for (int i = 0; i < 4; i++)
+        {
+            visualWheelLocalPositions[i] = transform.InverseTransformPoint(visualWheels[i].position);
+            visualWheelLocalRotations[i] = Quaternion.Inverse(transform.rotation) * visualWheels[i].rotation;
+        }
+    }
+
+    public void ValidateGearSettings()
+    {
+        if (numberOfGears < 0) numberOfGears = 0;
+        if (numberOfGears > 16) numberOfGears = 16;
+        for (int i = 0; i < numberOfGears; i++)
+        {
+            if (i + 1 > gearIsBestAtRelSpeed.Count)
+            {
+                gearIsBestAtRelSpeed.Add(i == 0 ? 0 : gearIsBestAtRelSpeed[i - 1]);
+            }
+
+            if (i > 0)
+            {
+                if (gearIsBestAtRelSpeed[i] < gearIsBestAtRelSpeed[i - 1])
+                {
+                    gearIsBestAtRelSpeed[i] = gearIsBestAtRelSpeed[i - 1];
+                }
+            }
+        }
+        gearScaleAtMinimum = MinAccelerationScaleLookupTable.GetMinAccelerationScale(gearImpactOnAcceleration);
+        gearScaleDiff = 1 + gearImpactOnAcceleration - gearScaleAtMinimum;
+    }
 
 
     float GetAverageWheelSpinningSpeed()
@@ -588,6 +657,7 @@ public class Car : MonoBehaviour
 
         return worldInertiaTensor;
     }
+   
     private void FindGroundInteraction(out Vector3[] hitPoints, out Vector3[] hitNormals, out float[] absoluteSpringCompressions, out int[] collidedGroundType)
     {
         hitPoints = new Vector3[4];
@@ -673,8 +743,6 @@ public class Car : MonoBehaviour
             previouslyAcceptedGroundNormal = currentGroundNormal;
         }
     }
-
-   
 
     private void ComputeGroundAndAirStatus()
     {
@@ -893,8 +961,6 @@ public class Car : MonoBehaviour
         return (totalV, vdir, new Vector3(wx, wy, wz), new Vector3(s.x * angularDirections.x, s.y * angularDirections.y, s.z * angularDirections.z), ImpulseDirToCancleCurrent.normalized);
         
     }
-    
-
 
     Vector3 GetActualPointVelocity(Vector3 point)
     {
@@ -912,83 +978,13 @@ public class Car : MonoBehaviour
         return transform.TransformPoint(liftedPointInLocalSpace); //=liftedPointInWorldSpace
     }
 
-
-    public void UpdateDependendParameters() //Note: This Method is also called when you make changes in Inspector during play mode
-    {
-        rb = GetComponent<Rigidbody>();
-        gravityReciver = GetComponent<CustomGravityReciver>();
-        usedGravityForSprings = springsByDefaultGravity ? Physics.gravity.magnitude : Mathf.Abs(springsByOtherValue);
-        float distCenterFrontWheel = Mathf.Abs(frontRightWheelCenter.z - rb.centerOfMass.z);
-        float distCenterRearWheel = Mathf.Abs(rearRightWheelCenter.z - rb.centerOfMass.z);
-        float frontSpringWeightRatio = distCenterRearWheel / (distCenterFrontWheel + distCenterRearWheel);
-        float rearSpringWeightRatio = 1 - frontSpringWeightRatio;
-        springAccelerationPerM[0] = usedGravityForSprings * frontSpringWeightRatio * 0.5f / frontWheelSuspensionDistanceToLiftCarWeight;
-        springAccelerationPerM[1] = springAccelerationPerM[0];
-        springAccelerationPerM[2] = usedGravityForSprings * rearSpringWeightRatio * 0.5f / rearWheelSuspensionDistanceToLiftCarWeight;
-        springAccelerationPerM[3] = springAccelerationPerM[2];
-        combinedGroundLayers = solidGround | looseGround;
-        extraEffortForWheelSpin = (1 + 2 * frontWheelRotationHoldsRatioOfSpeed + 2 * rearWheelRotationHoldsRatioOfSpeed);
-    }
-
-    public void UpdateArrayAccessibleParameters(bool calledFromInspector)
-    {
-        wheelCenters = new Vector3[] { frontRightWheelCenter + 2 * Vector3.left * frontRightWheelCenter.x, frontRightWheelCenter, rearRightWheelCenter + 2 * Vector3.left * rearRightWheelCenter.x, rearRightWheelCenter };
-        Vector3 fr3DOffset = Vector3.right * (frontWheelOutwardThickness - frontWheelInwardThickness) / 2;
-        Vector3 br3DOffset = Vector3.right * (rearWheelOutwardThickness - rearWheelInwardThickness) / 2;
-        wheel3DCenters = new Vector3[] { wheelCenters[0] - fr3DOffset, wheelCenters[1] + fr3DOffset, wheelCenters[2] - br3DOffset, wheelCenters[3] + br3DOffset };
-        upwardSuspensionCap = new float[] { frontSuspHardCap, frontSuspHardCap, rearSuspHardCap, rearSuspHardCap };
-        upwardSuspensionCapVec = new Vector3[] { Vector3.up * frontSuspHardCap, Vector3.up * frontSuspHardCap, Vector3.up * rearSuspHardCap, Vector3.up * rearSuspHardCap };
-        looseSpringOffsetLength = new float[] { frontWheelSuspensionDistanceToLiftCarWeight, frontWheelSuspensionDistanceToLiftCarWeight, rearWheelSuspensionDistanceToLiftCarWeight, rearWheelSuspensionDistanceToLiftCarWeight };
-        wheelRadii = new float[] { frontWheelRadius, frontWheelRadius, rearWheelRadius, rearWheelRadius };
-
-        for (int i = 0; i < 4; i++)
-        {
-            wheelCentersStartPoint[i] = wheelCenters[i] + upwardSuspensionCapVec[i] + Vector3.up * wheelRadii[i];
-            wheelCentersEndPoint[i] = wheelCenters[i] + Vector3.down * (looseSpringOffsetLength[i] + wheelRadii[i]);
-            wheel3DCentersStartPoint[i] = wheel3DCenters[i] + upwardSuspensionCapVec[i] + Vector3.up * wheelRadii[i];
-            wheel3DCentersEndPoint[i] = wheel3DCenters[i] + Vector3.down * looseSpringOffsetLength[i];
-            wheel3DThicknesses[i] = i < 2 ? frontWheelInwardThickness + frontWheelOutwardThickness : rearWheelInwardThickness + rearWheelOutwardThickness;
-        }
-
-        if (calledFromInspector && Application.isPlaying) return; //everything after here in this method will not be changed from the inspector during play-Mode
-
-        for (int i = 0; i < 4; i++)
-        {
-            visualWheelLocalPositions[i] = transform.InverseTransformPoint(visualWheels[i].position);
-            visualWheelLocalRotations[i] = Quaternion.Inverse(transform.rotation) * visualWheels[i].rotation;
-        }
-    }
-
-    public void ValidateGearSettings()
-    {
-        if(numberOfGears<0)numberOfGears=0;
-        if(numberOfGears>16)numberOfGears=16;
-        for(int i=0; i < numberOfGears; i++)
-        {
-            if (i+1 > gearIsBestAtRelSpeed.Count)
-            {
-                gearIsBestAtRelSpeed.Add(i==0?0: gearIsBestAtRelSpeed[i - 1]);
-            }
-
-            if (i > 0)
-            {
-                if(gearIsBestAtRelSpeed[i] < gearIsBestAtRelSpeed[i - 1])
-                {
-                    gearIsBestAtRelSpeed[i] = gearIsBestAtRelSpeed[i - 1];
-                }
-            }
-        }
-        gearScaleAtMinimum = MinAccelerationScaleLookupTable.GetMinAccelerationScale(gearImpactOnAcceleration);
-        gearScaleDiff = 1+gearImpactOnAcceleration - gearScaleAtMinimum;
-    }
-
     public float GetAccelerationScaleByGear(int currentGear, float currentSpeed)
     {
         if (numberOfGears == 0) return 1;
         if (gearImpactOnAcceleration == 0) return 1;
         return 1 + gearImpactOnAcceleration - gearScaleDiff * GetGearUneffectivenessRating(currentGear, currentSpeed);
     }
-
+   
     float GetGearUneffectivenessRating(int currentGear, float currentSpeed)
     {
         float twistDirMultiplier = (currentGear < 0 && currentSpeed > 0) || (currentGear > -1 && currentSpeed < 0) ? -1 : 1;
@@ -1001,12 +997,12 @@ public class Car : MonoBehaviour
         return offsetFromOptimum / distToReccomendedShiftMoment;
     }
 
-
     float GetShiftUpMoment(int currentGear)
     {
         if (currentGear < 0) currentGear = 0;
         return currentGear == (numberOfGears - 1) ? 1 : (gearIsBestAtRelSpeed[currentGear] + gearIsBestAtRelSpeed[currentGear + 1]) / 2;
     }
+    
     float GetShiftDownMoment(int currentGear)
     {
         if (currentGear < 0) currentGear = 0;
@@ -1133,37 +1129,6 @@ public class Car : MonoBehaviour
         }
     }
 
-    void ApplyArcadySteeringOrAirSteering()
-    {
-        //use the air steering or arcady steering depending if at least one wheel is on the ground. Nothing needs to be done here if the possible change is set to 0
-        float usedMaxAngularChangePerSecond = numberOfGroundedWheels == 0 ? maxAnglesPSChangeAtAirSteering : maxAnglesPSChangeAtArcadySteering;
-        if (usedMaxAngularChangePerSecond == 0) return;
-
-        Vector3 velocityWithoutLocalYSpeed = rb.velocity - Vector3.Dot(rb.velocity, rb.rotation * Vector3.up) * (rb.rotation * Vector3.up);
-        float fowardOrBackward = Vector3.Dot(rb.velocity, rb.rotation * Vector3.forward)<0? -1:1;
-
-
-
-        float wantedRotationInRadiansPerSecond;
-        if(turningRadius == Mathf.Infinity)
-        {
-            wantedRotationInRadiansPerSecond = 0;
-        }
-        else
-        {
-            wantedRotationInRadiansPerSecond = velocityWithoutLocalYSpeed.magnitude* fowardOrBackward / turningRadius;
-        }
-
-        float currentLocalYRoation = (transform.InverseTransformDirection(rb.angularVelocity).normalized * rb.angularVelocity.magnitude).y;
-        float plannedAPSChange = wantedRotationInRadiansPerSecond - currentLocalYRoation;
-        float maxRPSChangeThisFrame = usedMaxAngularChangePerSecond * Time.fixedDeltaTime * Mathf.Deg2Rad;
-        plannedAPSChange = Mathf.Clamp(plannedAPSChange, -maxRPSChangeThisFrame, maxRPSChangeThisFrame);
-
-        Vector3 angularVelocityToChange = transform.TransformDirection(Vector3.up).normalized * plannedAPSChange;
-
-        rb.angularVelocity += angularVelocityToChange;
-    }
-
     void ApplyTurnUpwards()
     {
         //The car is only turned upwards if a wheel or the cars collider is in contact with the ground
@@ -1209,7 +1174,6 @@ public class Car : MonoBehaviour
         Vector3 angularVelocityToChange = transform.TransformDirection(Vector3.forward).normalized * plannedZRotationChange;
         rb.angularVelocity += angularVelocityToChange;
     }
-
 
     void ComputeGearShiftState()
     {
@@ -1334,127 +1298,6 @@ public class Car : MonoBehaviour
         return clutchState;
     }
 
-    void ManageAudioOverlayAndVisualParticles(int currentGear, float currentWheelSpinSpeed, float currentSpeed)  
-    {
-        //Audio
-        bool isInNegativeGear = currentGear < 0;
-        if(currentGear <0) currentGear = 0;
-
-        float pitchRawChange = 0;
-        float totalPitch = selectedBasePitchForEngine;
-
-        if (audioForEngine != null)
-        {
-            if (numberOfGears != 0)
-            {
-                float currenSpeedRatio = speedupCurve.GetTimeInCurve(currentWheelSpinSpeed);
-                float currentDeltaPitchAmplification = 1 + currentGear * amplifyDeltaPitchPerGear;
-                if (currenSpeedRatio > gearIsBestAtRelSpeed[currentGear])
-                {
-                    float nextMinScaleReachedAt = GetShiftUpMoment(currentGear);
-                    float distMaxToMin = nextMinScaleReachedAt - gearIsBestAtRelSpeed[currentGear];
-                    float currentRatioDistanceToMax = currenSpeedRatio - gearIsBestAtRelSpeed[currentGear];
-                    pitchRawChange = currentRatioDistanceToMax / distMaxToMin;
-                    totalPitch *= (1 + deltaPitchAtHighGearSpeed * currentDeltaPitchAmplification * pitchRawChange);
-                }
-                else
-                {
-                    float previousMinScaleReachedAt = GetShiftDownMoment(currentGear);
-                    float distMinToMax = gearIsBestAtRelSpeed[currentGear] - previousMinScaleReachedAt;
-                    float currentRatioDistanceToMax = gearIsBestAtRelSpeed[currentGear] - currenSpeedRatio;
-                    pitchRawChange = -currentRatioDistanceToMax / distMinToMax;
-                    totalPitch /= (1 + (deltaPitchAtLowGearSpeed * currentDeltaPitchAmplification * -pitchRawChange));
-                }
-            }
-
-
-            float totalVolume = selectedBaseVolumeForEngine;
-            float volumeScaledByThrottle = Mathf.Lerp(1, Mathf.Max(ThrottleKey.Value, BackwardThrottleKey.Value), volumeScaleWithThrottleInput);
-            float volumeScaledByGearState = Mathf.Lerp(1, GetClutchValue(), volumeDropOffAtGearShift);
-            float volumeScaledByGearUneffectiveness = 1 / (1 + GetGearUneffectivenessRating(isInNegativeGear ? -1 : currentGear, currentWheelSpinSpeed) * volumeDropOffAtLowGearEffectiveness);
-            totalVolume *= (volumeScaledByThrottle * volumeScaledByGearState * volumeScaledByGearUneffectiveness);
-            audioForEngine.pitch = totalPitch;
-            audioForEngine.volume = totalVolume;
-        }
-
-        //Sliding Tire Sound and Smoke
-        float numberOfSlips = 0;
-        float combinedSlipRatio = 0;
-        for(int i= 0; i < 4; i++)
-        {
-            int dir = fowardSpeedOverGroundAtWheel[i] > currentWheelSpinningSpeeds[i] ? 1 : -1;
-            float slipRatio = GetSlipRatio(fowardSpeedOverGroundAtWheel[i], sideSlideSpeeds[i], currentWheelSpinningSpeeds[i], dir).slilpRatio;
-
-            bool slipsEnough = Mathf.Abs(fowardSpeedOverGroundAtWheel[i]) > 1 && slipRatio > gripOnSolidGround.slipRatioOfMaxGrip + 0.02f && absoluteSpringCompressions[i] > 0;
-            if (slipsEnough)
-            {
-                numberOfSlips++;
-                combinedSlipRatio += (slipRatio - gripOnSolidGround.slipRatioOfMaxGrip);
-            }
-
-
-            if (particlePrefab != null)
-            {
-                if (slipsEnough)
-                {
-                    if(!particleSystems[i].isPlaying) particleSystems[i].Play();
-                    particleGameObjects[i].transform.position = hitPoints[i];
-                    particleGameObjects[i].transform.rotation = Quaternion.LookRotation(fowardOnGroundAtWheel[i]*-dir, transform.up) * Quaternion.Euler(-50,0,0);
-                    particleSystems[i].enableEmission = true;
-                }
-                else
-                {
-                    particleSystems[i].enableEmission = false;
-                }
-            }
-
-            
-
-        }
-        if (audioForSlip != null)
-        {
-            if(numberOfSlips > 0)
-            {
-                audioForSlip.volume = (0.2f*numberOfSlips + combinedSlipRatio/6f);
-                if (!audioForSlip.isPlaying) audioForSlip.Play();
-            }
-            else
-            {
-                //audioForSlip.Pause();
-                audioForSlip.volume -= 2 * Time.fixedDeltaTime;
-                if (audioForEngine.volume <= 0)
-                {
-                    audioForSlip.Pause();
-                }
-            }
-        }
-
-        //Overlay
-        if (guiSliderForShifting != null)
-        {
-            float shownValue = 0.5f + 0.25f * pitchRawChange;
-
-            guiSliderForShifting.value = shownValue;
-            ColorBlock cb = guiSliderForShifting.colors;
-            cb.normalColor = shownValue < 0.2f ? Color.red : shownValue < 0.25 ? Color.yellow : shownValue < 0.75f ? Color.green : shownValue < 0.8f ? Color.yellow : Color.red;
-            guiSliderForShifting.colors = cb;
-        }
-        if(guiSliderForClutch != null)
-        {
-            guiSliderForClutch.value = GetClutchValue();
-        }
-        if(guiGear != null)
-        {
-            guiGearTextMeshPro.text = isInNegativeGear ? "R" : (currentGear + 1).ToString();
-        }
-        if (guiSpeed != null)
-        {
-            guiSpeedTextMeshPro.text = (currentSpeed*3.6f).ToString("F0")+" km/h";
-        }
-
-    }
-
-
     float GetAirResistanceSlowdownForSpeedAbs(float speed)
     {
         return slowByAirResistanceAt30ms  * Mathf.Pow(Mathf.Abs(speed/30), airResistanceExponent);
@@ -1475,32 +1318,32 @@ public class Car : MonoBehaviour
         //Note: "motorAcceleration.atNoThrottle" is always 0 or negative, whereas ".atFullThrottle" it is usualy positive but could also turn out negative if a very unsuitable gear is used.
         (float atFullThrottle, float atNoThrottle) motorAcceleration = GetMotorAccelerationAbs();
 
-        if (HandbreakKey.Value > 0)
+        if (HandbrakeKey.Value > 0)
         {
-            actionMode = ActionMode.Handbreak;
-            forceDirection = -wheelSpinningDirectionalMultiplier; //breaking applies force into the opposite direction of the current wheel Spin.
+            actionMode = ActionMode.Handbrake;
+            forceDirection = -wheelSpinningDirectionalMultiplier; //braking applies force into the opposite direction of the current wheel Spin.
 
-            //the breaking from the handbreak and the motor are combined here - as well as the proportional distribution to front or rear wheels.
-            //However the combined slow can not exceed the maximum slow from the handbreak. This way the player can not abuse shifting into a way-too-low gear to get unintended good breaking power.
-            float handbreakBreakPower = handBreakMaxSlowdown * HandbreakKey.Value * extraEffortForWheelSpin;
-            float motorBreakPower = -motorAcceleration.atNoThrottle;
-            float ratioOfMotorBreak = motorBreakPower / (motorBreakPower + handbreakBreakPower);
-            frontWheelsPowerShare = handBreakAppliedToFrontWheels * (1 - ratioOfMotorBreak) + motorBreakPower * ratioOfMotorBreak;
-            totalAvailablePower = handbreakBreakPower + motorBreakPower;
-            usedSlipPreventer = handBreakRestrainToOptimiseGrip;
-            if (totalAvailablePower > handBreakMaxSlowdown) totalAvailablePower = handBreakMaxSlowdown;
+            //the braking from the handbrake and the motor are combined here - as well as the proportional distribution to front or rear wheels.
+            //However the combined slow can not exceed the maximum slow from the handbrake. This way the player can not abuse shifting into a way-too-low gear to get unintended good braking power.
+            float handbrakeBrakePower = handBrakeMaxSlowdown * HandbrakeKey.Value * extraEffortForWheelSpin;
+            float motorBrakePower = -motorAcceleration.atNoThrottle;
+            float ratioOfMotorBrake = motorBrakePower / (motorBrakePower + handbrakeBrakePower);
+            frontWheelsPowerShare = handBrakeAppliedToFrontWheels * (1 - ratioOfMotorBrake) + motorBrakePower * ratioOfMotorBrake;
+            totalAvailablePower = handbrakeBrakePower + motorBrakePower;
+            usedSlipPreventer = handBrakeRestrainToOptimiseGrip;
+            if (totalAvailablePower > handBrakeMaxSlowdown) totalAvailablePower = handBrakeMaxSlowdown;
         }
-        else if (BreakKey.Value > 0)//breaking works like handbreaking just with other values
+        else if (BrakeKey.Value > 0)//braking works like handbraking just with other values
         {
-            actionMode = ActionMode.Break;
+            actionMode = ActionMode.Brake;
             forceDirection = -wheelSpinningDirectionalMultiplier;
-            float breakBreakPower = breakMaxSlowdown * BreakKey.Value * extraEffortForWheelSpin;
-            float motorBreakPower = -motorAcceleration.atNoThrottle;
-            float ratioOfMotorBreak = motorBreakPower / (motorBreakPower + breakBreakPower);
-            frontWheelsPowerShare = breakAppliedToFrontWheels * (1 - ratioOfMotorBreak) + motorBreakPower * ratioOfMotorBreak;
-            totalAvailablePower = breakBreakPower + motorBreakPower;
-            usedSlipPreventer = breakRestrainToOptimiseGrip;
-            if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+            float brakeBrakePower = brakeMaxSlowdown * BrakeKey.Value * extraEffortForWheelSpin;
+            float motorBrakePower = -motorAcceleration.atNoThrottle;
+            float ratioOfMotorBrake = motorBrakePower / (motorBrakePower + brakeBrakePower);
+            frontWheelsPowerShare = brakeAppliedToFrontWheels * (1 - ratioOfMotorBrake) + motorBrakePower * ratioOfMotorBrake;
+            totalAvailablePower = brakeBrakePower + motorBrakePower;
+            usedSlipPreventer = brakeRestrainToOptimiseGrip;
+            if (totalAvailablePower > brakeMaxSlowdown) totalAvailablePower = brakeMaxSlowdown;
         }
         else if ((gearShiftMode == GearShiftMode.Automatic || numberOfGears == 0) ? (currentGear >= 0 && ThrottleKey.Value > 0) : ThrottleKey.Value > 0)
         {
@@ -1520,7 +1363,7 @@ public class Car : MonoBehaviour
                 forceDirection = -wheelSpinningDirectionalMultiplier;
                 totalAvailablePower = -acceleration;
                 usedSlipPreventer = 0;
-                if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+                if (totalAvailablePower > brakeMaxSlowdown) totalAvailablePower = brakeMaxSlowdown;
 
             }
 
@@ -1543,7 +1386,7 @@ public class Car : MonoBehaviour
                 forceDirection = -wheelSpinningDirectionalMultiplier;
                 totalAvailablePower = -acceleration;
                 usedSlipPreventer = 0;
-                if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+                if (totalAvailablePower > brakeMaxSlowdown) totalAvailablePower = brakeMaxSlowdown;
             }
         }
         else //rolling
@@ -1553,7 +1396,7 @@ public class Car : MonoBehaviour
             forceDirection = -wheelSpinningDirectionalMultiplier;
             totalAvailablePower = -motorAcceleration.atNoThrottle;
             usedSlipPreventer = 0;
-            if (totalAvailablePower > breakMaxSlowdown) totalAvailablePower = breakMaxSlowdown;
+            if (totalAvailablePower > brakeMaxSlowdown) totalAvailablePower = brakeMaxSlowdown;
         }
     }
 
@@ -1613,12 +1456,12 @@ public class Car : MonoBehaviour
             powerShareForMovement[0 + i] = remainingMotorShare * leftRelShareForMovement;
             powerShareForMovement[1 + i] = remainingMotorShare * rightRelShareForMovement;
 
-            //combine motor-/break-power with slow from rolling friction. So far we used the power available for one second. To get the power available for this physicFrame we multiply the result with Time.fixedDeltaTime;
+            //combine motor-/brake-power with slow from rolling friction. So far we used the power available for one second. To get the power available for this physicFrame we multiply the result with Time.fixedDeltaTime;
             availableImpulseForFrame[0 + i] = ((powerShareForWheelRotation[0 + i] + powerShareForMovement[0 + i]) * forceDirection * totalAvailablePower + rollingFrictioSlowdownForEachWheel[0 + i] * (-wheelSpinningDirectionalMultiplier)) * Time.fixedDeltaTime;
             availableImpulseForFrame[1 + i] = ((powerShareForWheelRotation[1 + i] + powerShareForMovement[1 + i]) * forceDirection * totalAvailablePower + rollingFrictioSlowdownForEachWheel[1 + i] * (-wheelSpinningDirectionalMultiplier)) * Time.fixedDeltaTime;
-            if (actionMode == ActionMode.AccelerateByMotor) //only accelerating could lead to a direction change. All types of breaking can not (variable is false by default)
+            if (actionMode == ActionMode.AccelerateByMotor) //only accelerating could lead to a direction change. All types of braking can not (variable is false by default)
             {
-                //accelerating can lead to a direction change, but only when the rolling-friction-slowdown does not cancle it out, because that would make it a form of breaking in total
+                //accelerating can lead to a direction change, but only when the rolling-friction-slowdown does not cancle it out, because that would make it a form of braking in total
                 canLeadToDirectionChange[0 + i] = availableImpulseForFrame[0 + i] * forceDirection < 0 ? false : true;
                 canLeadToDirectionChange[1 + i] = availableImpulseForFrame[1 + i] * forceDirection < 0 ? false : true;
             }
@@ -1634,7 +1477,7 @@ public class Car : MonoBehaviour
             float spinningSpeed = currentWheelSpinningSpeeds[i];
             if (actionMode != ActionMode.AccelerateByMotor)
             {
-                //ensures that breaking does not lead to acceleration. Therefore it must be working against the spinning speed or working against the movement when wheel spin is already lockt to zero
+                //ensures that braking does not lead to acceleration. Therefore it must be working against the spinning speed or working against the movement when wheel spin is already lockt to zero
                 availablePower = Mathf.Abs(availablePower) * (spinningSpeed > 0 ? -1 : spinningSpeed < 0 ? 1 : lengthwiseSpeedOverGround > 0 ? -1 : lengthwiseSpeedOverGround < 0 ? 1 : 0);
             }
             int availablePowerDirection = availablePower < 0 ? -1 : availablePower > 0 ? 1 : lengthwiseSpeedOverGround < spinningSpeed ? 1 : -1;
@@ -1653,7 +1496,7 @@ public class Car : MonoBehaviour
                     spinningSpeed = Mathf.Lerp(spinningSpeed, lengthwiseSpeedOverGround, availablePower / neededPowerToMakeSpinMatch);
                     availablePower = 0;
                     if (float.IsNaN(spinningSpeed)) { Debug.LogError("invalide SpinningSpeed in SZENARIO 0"); }
-                    //the entire force from friction/break/motor was already used to make the wheelspin match more to the speed over the ground,
+                    //the entire force from friction/brak/motor was already used to make the wheelspin match more to the speed over the ground,
                     //so the force direction is no longer decided from their direction. Instead the direction is foward or backward depending on the spin relative to its speed over ground
                     availablePowerDirection = lengthwiseSpeedOverGround < spinningSpeed ? 1 : -1;
                     // -> this will lead to Szenario 1
@@ -1828,7 +1671,7 @@ public class Car : MonoBehaviour
             }
 
 
-            //all forms of breaking or slowdown can slow the wheel spin down or even lock them, but should not be able to accelerate the spin into the opposite direction.
+            //all forms of braking or slowdown can slow the wheel spin down or even lock them, but should not be able to accelerate the spin into the opposite direction.
             //The following lines prevent cases, where the previous code wrongfully created that behaviour
             if (!canLeadToDirectionChange[i] && (plannedSpin * lengthwiseSpeedOverGround < 0) && (spinningSpeed * plannedSpin < 0 || (spinningSpeed == 0 && plannedSpin != 0)))
             {
@@ -1905,7 +1748,7 @@ public class Car : MonoBehaviour
     (float slilpRatio, bool usesFowardForce) GetSlipRatio(float fowardSpeedOverGround, float sidewaysSlip, float wheelSpin, int intendedDirection)
     {
         bool usesFowardForce = fowardSpeedOverGround < wheelSpin || (fowardSpeedOverGround==wheelSpin && intendedDirection>0);
-        //bool useSlipRatioForBreaking = Mathf.Abs(fowardSpeedOverGround) > Mathf.Abs(wheelSpin) || (Mathf.Abs(fowardSpeedOverGround) == Mathf.Abs(wheelSpin) && (wheelSpin*intendedDirection<0));
+        //bool useSlipRatioForBraking = Mathf.Abs(fowardSpeedOverGround) > Mathf.Abs(wheelSpin) || (Mathf.Abs(fowardSpeedOverGround) == Mathf.Abs(wheelSpin) && (wheelSpin*intendedDirection<0));
         bool oppositeDirection = fowardSpeedOverGround * wheelSpin < 0;
         //float slipMagnitude = Mathf.Sqrt(fowardSpeedOverGround*fowardSpeedOverGround+sidewaysSlip*sidewaysSlip);
 
@@ -1916,13 +1759,13 @@ public class Car : MonoBehaviour
 
         
         float K = Mathf.Abs(wheelSpin) / Mathf.Abs(fowardSpeedOverGround);
-        if (K < 1) K = 2 - K; // The original formula does not work correctly for breaking (aka K < 1). This fixes the issue by treating it equal to acceleration
+        if (K < 1) K = 2 - K; // The original formula does not work correctly for braking (aka K < 1). This fixes the issue by treating it equal to acceleration
         // |1-K| would be the lengthwise slipRatio
         // the slipAngle can also increase the slipRatio and leads to a SlipRatio of 1 by itself at 90 Degree
         slipRatio = Mathf.Sqrt(Mathf.Pow(K * Mathf.Sin(slipAngle*Mathf.Deg2Rad), 2) + Mathf.Pow(1 - K * Mathf.Cos(slipAngle*Mathf.Deg2Rad), 2));
 
         // the original formula does not tread movement and wheel spin in different directions correctly.
-        // The opposite-direction-wheel speed has more slip than a locked-wheel-break and is therefore set to maximum slip
+        // The opposite-direction-wheel speed has more slip than a locked-wheel-brak and is therefore set to maximum slip
         if (oppositeDirection) slipRatio = 1;
 
         slipRatio = Mathf.Clamp01(slipRatio);
@@ -2090,7 +1933,7 @@ public class Car : MonoBehaviour
         return (availableLengthwiseGripPower, availableSidewaysGripPower);
     }
 
-    private void BalanceAndApplyImpulses(Vector3[] posToApplyForce, Vector3[] directionToApplyForce, float[] maxForce, float[] currentSpeedAgainstForceDirection, bool[] isBreakingForce)
+    private void BalanceAndApplyImpulses(Vector3[] posToApplyForce, Vector3[] directionToApplyForce, float[] maxForce, float[] currentSpeedAgainstForceDirection, bool[] isBrakingForce)
     {
         (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[] impulseProperties = new (float maxV, float maxVDir, Vector3 maxW, Vector3 rotToV, Vector3 vDirection)[4];
         for (int i = 0; i < 4; i++)
@@ -2123,14 +1966,14 @@ public class Car : MonoBehaviour
             }
         }
 
-        //breaking forces start with a ratio of 0. That way the aproximation does not oscillate
+        //braking forces start with a ratio of 0. That way the aproximation does not oscillate
         float[] plannedRatios = new float[4] { 0, 0, 0, 0 };
         float[] prevIterationPR = new float[4] { -2, -2, -2, -2 };
 
         int numberOfAccelerationForces = 0;
         for (int i = 0; i < 4; i++)
         {
-            if (!isBreakingForce[i])
+            if (!isBrakingForce[i])
             {
                 numberOfAccelerationForces++;
                 plannedRatios[i] = 1;
@@ -2139,16 +1982,16 @@ public class Car : MonoBehaviour
 
         //every wheels Friction is limited to only stop the wheels lateral movement and can not make it move into the opposide direction
         //this loop chooses this correct possible friction impulse with respect to all interactions with other wheels
-        if (numberOfAccelerationForces < 4) //aproximation is only needed for breaking forces. So this part is skipped if every wheel accelerates.
+        if (numberOfAccelerationForces < 4) //aproximation is only needed for braking forces. So this part is skipped if every wheel accelerates.
         {
             for (int iterationCount = 0; iterationCount < 100; iterationCount++)
             {
 
                 for (int i = 0; i < 4; i++)
                 {
-                    if (!isBreakingForce[i])
+                    if (!isBrakingForce[i])
                     {
-                        continue; //no need to limit forces, which are no breaking forces
+                        continue; //no need to limit forces, which are no braking forces
                     }
 
                     if (impulseProperties[i].maxV == 0) //ignore Wheels without friction/ without contact to floor
@@ -2185,6 +2028,37 @@ public class Car : MonoBehaviour
         rb.AddRelativeTorque(new Vector3(angularVelChange.x * inertiaTensorWS.x, angularVelChange.y * inertiaTensorWS.y, angularVelChange.z * inertiaTensorWS.z), ForceMode.Impulse);
         rb.AddForce(directionalVelChange * rb.mass, ForceMode.Impulse);
     }
+
+    void ApplyArcadySteeringOrAirSteering()
+    {
+        //use the air steering or arcady steering depending if at least one wheel is on the ground. Nothing needs to be done here if the possible change is set to 0
+        float usedMaxAngularChangePerSecond = numberOfGroundedWheels == 0 ? maxAnglesPSChangeAtAirSteering : maxAnglesPSChangeAtArcadySteering;
+        if (usedMaxAngularChangePerSecond == 0) return;
+
+        Vector3 velocityWithoutLocalYSpeed = rb.velocity - Vector3.Dot(rb.velocity, rb.rotation * Vector3.up) * (rb.rotation * Vector3.up);
+        float fowardOrBackward = Vector3.Dot(rb.velocity, rb.rotation * Vector3.forward) < 0 ? -1 : 1;
+
+
+
+        float wantedRotationInRadiansPerSecond;
+        if (turningRadius == Mathf.Infinity)
+        {
+            wantedRotationInRadiansPerSecond = 0;
+        }
+        else
+        {
+            wantedRotationInRadiansPerSecond = velocityWithoutLocalYSpeed.magnitude * fowardOrBackward / turningRadius;
+        }
+
+        float currentLocalYRoation = (transform.InverseTransformDirection(rb.angularVelocity).normalized * rb.angularVelocity.magnitude).y;
+        float plannedAPSChange = wantedRotationInRadiansPerSecond - currentLocalYRoation;
+        float maxRPSChangeThisFrame = usedMaxAngularChangePerSecond * Time.fixedDeltaTime * Mathf.Deg2Rad;
+        plannedAPSChange = Mathf.Clamp(plannedAPSChange, -maxRPSChangeThisFrame, maxRPSChangeThisFrame);
+
+        Vector3 angularVelocityToChange = transform.TransformDirection(Vector3.up).normalized * plannedAPSChange;
+
+        rb.angularVelocity += angularVelocityToChange;
+    }
     void PerformInAirBalance()
     {
         bool doInstantCorrection = justLeftGround && fixFlightRotationAtLeavingGround;
@@ -2192,8 +2066,8 @@ public class Car : MonoBehaviour
 
         Vector3 startingCenter = transform.position;
 
-        float timeStepDuration = 0.05f; //predicted time per ray in seconds
-        int numberOfTimesteps = doInstantCorrection ? 300 : 30; // 300 * 0.05s = 15s predicted duration at leaving ground and 25*0.05s = 1.5s predicted duration in Air
+        float timeStepDuration = Time.fixedDeltaTime*5; //predicted time per ray in seconds
+        int numberOfTimesteps = doInstantCorrection ? 100 : 30; // 300 * 0.05s = 15s predicted duration at leaving ground and 60*0.05s = 3s predicted duration in Air
         Vector3[] flightPositions = new Vector3[numberOfTimesteps + 1];
         Vector3[,] dotCurves = new Vector3[3, numberOfTimesteps + 1]; //It will contain three "curves", each represented by a row of points.
                                                                       // The points will be connected by raycasts to form the curve and check where the curve collides with terrain.
@@ -2231,6 +2105,7 @@ public class Car : MonoBehaviour
             moveDirRotAtIndex[i] = Quaternion.LookRotation(velocityAtPrevTimestep, -gravityAtPrevPoint);
             flightPositions[i] = flightPositions[i - 1] + velocityAtPrevTimestep * timeStepDuration + 0.5f * gravityAtPrevPoint * timeStepDuration * timeStepDuration;
             Debug.DrawLine(flightPositions[i - 1], flightPositions[i], Color.black, Time.fixedDeltaTime);
+            Debug.DrawRay(flightPositions[i - 1], gravityAtPrevPoint, Color.yellow, Time.fixedDeltaTime);
 
             velocityAtPrevTimestep += gravityAtPrevPoint * timeStepDuration;
             velocityAtPrevTimestep -= GetAirResistanceSlowdownForSpeedAbs(velocityAtPrevTimestep.magnitude) * timeStepDuration * velocityAtPrevTimestep.normalized;
@@ -2289,8 +2164,12 @@ public class Car : MonoBehaviour
             float rotMagnitudeDone = rb.angularVelocity.magnitude * Mathf.Rad2Deg * timeToContact;
             Quaternion rotChangeWithCurrentAngVel = Quaternion.AngleAxis(rotMagnitudeDone, rb.angularVelocity.normalized);
             Quaternion rotOnArrivalWithCurretnAV = rotChangeWithCurrentAngVel * rb.rotation;
-            Vector3 aimedforward = Vector3.Cross(rotOnArrivalWithCurretnAV * Vector3.right, contactNormal);
-            Quaternion aimedRotation = Quaternion.LookRotation(aimedforward, contactNormal);
+            
+            
+            //Vector3 aimedForward = Vector3.Cross(rotOnArrivalWithCurretnAV * Vector3.right, contactNormal);
+            Vector3 aimedRightFromFoward = Vector3.Cross(contactNormal, rotOnArrivalWithCurretnAV * Vector3.forward);
+            Vector3 aimedForward = Vector3.Cross(aimedRightFromFoward, contactNormal);
+            Quaternion aimedRotation = Quaternion.LookRotation(aimedForward, contactNormal);
 
             //visual debugging
             if (visualDebugCar != null)
@@ -2322,7 +2201,7 @@ public class Car : MonoBehaviour
 
                 //A * B * C = D      means    changeWithCurrentAV * (AVChange * currentRot) = aimed 
                 //B = A^-1 * D * C^-1
-                Quaternion AVChange = Quaternion.Inverse(expectedRotChange) * aimedRotation * Quaternion.Inverse(rb.rotation); //WITH OLD AIMED ROTATION
+                Quaternion AVChange = Quaternion.Inverse(expectedRotChange) * aimedRotation * Quaternion.Inverse(rb.rotation);
 
 
                 //the angle is calculated by an adaptation of the solution from DMGregory at https://gamedev.stackexchange.com/questions/147409/rotate-from-current-rotation-to-another-using-angular-velocity (15.04.2024)
@@ -2334,7 +2213,9 @@ public class Car : MonoBehaviour
 
                 //Goal orientated version
                 Vector3 wantedAngularVelChange = (0.98f * angle * Mathf.Deg2Rad / timeToContact) * axis.normalized;
-                wantedAngularVelChange = new Vector3(wantedAngularVelChange.x, 0, wantedAngularVelChange.z);
+                Vector3 WAVCinContactNormalDir = Vector3.Dot(wantedAngularVelChange, contactNormal.normalized) * contactNormal.normalized;
+                //wantedAngularVelChange = new Vector3(wantedAngularVelChange.x, 0, wantedAngularVelChange.z);
+                wantedAngularVelChange -= WAVCinContactNormalDir;
 
                 float angularChangeLimitScale = wantedAngularVelChange.magnitude > maxAngularVelCorrectionInAir * Time.fixedDeltaTime ? maxAngularVelCorrectionInAir * Time.fixedDeltaTime / wantedAngularVelChange.magnitude : 1;
                 rb.angularVelocity += wantedAngularVelChange * angularChangeLimitScale; // continiouse rotation speed change in the air, limited by maxAngularVelCorrectionInAir.
@@ -2342,6 +2223,123 @@ public class Car : MonoBehaviour
         }
     }
 
+    void ManageAudioOverlayAndVisualParticles(int currentGear, float currentWheelSpinSpeed, float currentSpeed)
+    {
+        //Audio
+        bool isInNegativeGear = currentGear < 0;
+        if (currentGear < 0) currentGear = 0;
+
+        float pitchRawChange = 0;
+        float totalPitch = selectedBasePitchForEngine;
+
+        if (audioForEngine != null)
+        {
+            if (numberOfGears != 0)
+            {
+                float currenSpeedRatio = speedupCurve.GetTimeInCurve(currentWheelSpinSpeed);
+                float currentDeltaPitchAmplification = 1 + currentGear * amplifyDeltaPitchPerGear;
+                if (currenSpeedRatio > gearIsBestAtRelSpeed[currentGear])
+                {
+                    float nextMinScaleReachedAt = GetShiftUpMoment(currentGear);
+                    float distMaxToMin = nextMinScaleReachedAt - gearIsBestAtRelSpeed[currentGear];
+                    float currentRatioDistanceToMax = currenSpeedRatio - gearIsBestAtRelSpeed[currentGear];
+                    pitchRawChange = currentRatioDistanceToMax / distMaxToMin;
+                    totalPitch *= (1 + deltaPitchAtHighGearSpeed * currentDeltaPitchAmplification * pitchRawChange);
+                }
+                else
+                {
+                    float previousMinScaleReachedAt = GetShiftDownMoment(currentGear);
+                    float distMinToMax = gearIsBestAtRelSpeed[currentGear] - previousMinScaleReachedAt;
+                    float currentRatioDistanceToMax = gearIsBestAtRelSpeed[currentGear] - currenSpeedRatio;
+                    pitchRawChange = -currentRatioDistanceToMax / distMinToMax;
+                    totalPitch /= (1 + (deltaPitchAtLowGearSpeed * currentDeltaPitchAmplification * -pitchRawChange));
+                }
+            }
+
+
+            float totalVolume = selectedBaseVolumeForEngine;
+            float volumeScaledByThrottle = Mathf.Lerp(1, Mathf.Max(ThrottleKey.Value, BackwardThrottleKey.Value), volumeScaleWithThrottleInput);
+            float volumeScaledByGearState = Mathf.Lerp(1, GetClutchValue(), volumeDropOffAtGearShift);
+            float volumeScaledByGearUneffectiveness = 1 / (1 + GetGearUneffectivenessRating(isInNegativeGear ? -1 : currentGear, currentWheelSpinSpeed) * volumeDropOffAtLowGearEffectiveness);
+            totalVolume *= (volumeScaledByThrottle * volumeScaledByGearState * volumeScaledByGearUneffectiveness);
+            audioForEngine.pitch = totalPitch;
+            audioForEngine.volume = totalVolume;
+        }
+
+        //Sliding Tire Sound and Smoke
+        float numberOfSlips = 0;
+        float combinedSlipRatio = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            int dir = fowardSpeedOverGroundAtWheel[i] > currentWheelSpinningSpeeds[i] ? 1 : -1;
+            float slipRatio = GetSlipRatio(fowardSpeedOverGroundAtWheel[i], sideSlideSpeeds[i], currentWheelSpinningSpeeds[i], dir).slilpRatio;
+
+            bool slipsEnough = Mathf.Abs(fowardSpeedOverGroundAtWheel[i]) > 1 && slipRatio > gripOnSolidGround.slipRatioOfMaxGrip + 0.02f && absoluteSpringCompressions[i] > 0;
+            if (slipsEnough)
+            {
+                numberOfSlips++;
+                combinedSlipRatio += (slipRatio - gripOnSolidGround.slipRatioOfMaxGrip);
+            }
+
+            if (particlePrefab != null)
+            {
+                if (slipsEnough)
+                {
+                    if (!particleSystems[i].isPlaying) particleSystems[i].Play();
+                    particleGameObjects[i].transform.position = hitPoints[i];
+                    particleGameObjects[i].transform.rotation = Quaternion.LookRotation(fowardOnGroundAtWheel[i] * -dir, transform.up) * Quaternion.Euler(-50, 0, 0);
+                    particleSystems[i].enableEmission = true;
+                }
+                else
+                {
+                    particleSystems[i].enableEmission = false;
+                }
+            }
+        }
+        if (audioForSlip != null)
+        {
+            if (numberOfSlips > 0)
+            {
+                audioForSlip.volume = (0.2f * numberOfSlips + combinedSlipRatio / 6f);
+                if (!audioForSlip.isPlaying) audioForSlip.Play();
+            }
+            else
+            {
+                //audioForSlip.Pause();
+                audioForSlip.volume -= 2 * Time.fixedDeltaTime;
+                if (audioForEngine.volume <= 0)
+                {
+                    audioForSlip.Pause();
+                }
+            }
+        }
+
+        //Overlay
+        if (guiSliderForShifting != null)
+        {
+            float shownValue = 0.5f + 0.25f * pitchRawChange;
+
+            guiSliderForShifting.value = shownValue;
+            ColorBlock cb = guiSliderForShifting.colors;
+            cb.normalColor = shownValue < 0.2f ? Color.red : shownValue < 0.25 ? Color.yellow : shownValue < 0.75f ? Color.green : shownValue < 0.8f ? Color.yellow : Color.red;
+            guiSliderForShifting.colors = cb;
+        }
+        if (guiSliderForClutch != null)
+        {
+            guiSliderForClutch.value = GetClutchValue();
+        }
+        if (guiGear != null)
+        {
+            guiGearTextMeshPro.text = isInNegativeGear ? "R" : (currentGear + 1).ToString();
+        }
+        if (guiSpeed != null)
+        {
+            guiSpeedTextMeshPro.text = (currentSpeed * 3.6f).ToString("F0") + " km/h";
+        }
+
+    }
+
+    //Collision
     private void OnCollisionStay(Collision collision)
     {
         if (((1 << collision.gameObject.layer) & combinedGroundLayers) != 0)
@@ -2379,7 +2377,6 @@ public class Car : MonoBehaviour
             }
         }
     }
-
 }
 
 
@@ -2410,8 +2407,8 @@ enum ActionMode
 {
     AccelerateByMotor,
     DeccelerateByMotor,
-    Break,
-    Handbreak
+    Brake,
+    Handbrake
 }
 
 
